@@ -115,7 +115,7 @@ def main(page: ft.Page):
                 ft.Container(content=chat_display, expand=True, padding=10),
                 ft.Row([
                     msg_input, 
-                    ft.IconButton(ft=Icons.SEND, on_click=send_click, icon_color="blue")
+                    ft.IconButton(icon=ft.Icons.SEND, on_click=send_click, icon_color="blue")
                 ])
             ], expand=True)
         ], expand=True)
@@ -129,4 +129,3 @@ if __name__ == "__main__":
     # На Render переменная PORT подставится автоматически
     port = int(os.getenv("PORT", 8080))
     ft.app(target=main, view=None, port=port)
-
