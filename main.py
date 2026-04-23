@@ -5,8 +5,8 @@ from supabase import create_client
 
 # --- НАСТРОЙКИ ОБЛАКА (SUPABASE) ---
 # Возьми эти данные в Project Settings -> API
-SUPABASE_URL = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt" 
-SUPABASE_KEY = "sb_secret_MlBfRGLSdCPTdbWf9ASvtQ_eS7jNEKA"
+SUPABASE_URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
+SUPABASE_KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Файл для локального хранения ника (на устройстве)
@@ -129,3 +129,4 @@ if __name__ == "__main__":
     # На Render переменная PORT подставится автоматически
     port = int(os.getenv("PORT", 8080))
     ft.app(target=main, view=None, port=port)
+
