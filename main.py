@@ -18,11 +18,13 @@ def main(page: ft.Page):
     page.bgcolor = "black"
     page.theme = ft.Theme(font_family="Courier New")
     
-    # 1. Генерируем имя сразу
-    if not page.session.get("my_name"):
-        page.session.set("my_name", f"USER_{random.randint(100, 999)}")
+    # ИСПОЛЬЗУЕМ КЛИЕНТСКОЕ ХРАНИЛИЩЕ ВМЕСТО page.session
+    if not page.client_storage.get("my_name"):
+        import random
+        new_name = f"USER_{random.randint(100, 999)}"
+        page.client_storage.set("my_name", new_name)
     
-    my_name = page.session.get("my_name")
+    my_name = page.client_storage.get("my_name")
     
     # 2. Создаем элементы ДО подключения к базе
     chat_display = ft.ListView(expand=True, spacing=5, auto_scroll=True)
