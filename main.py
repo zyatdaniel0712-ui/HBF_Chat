@@ -1,131 +1,98 @@
 import flet as ft
 import os
-import json
 from supabase import create_client
 
-# --- НАСТРОЙКИ ОБЛАКА (SUPABASE) ---
-# Возьми эти данные в Project Settings -> API
-SUPABASE_URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
+# --- НАСТРОЙКИ ОБЛАКА ---
+SUPABASE_URL = "https://nesxjcdhqgstahwfnrba.supabase.co"
 SUPABASE_KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Файл для локального хранения ника (на устройстве)
-SETTINGS_FILE = "user_settings.json"
-
-def save_local_name(name):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump({"user_name": name}, f)
-
-def get_local_name():
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f).get("user_name", "Гость")
-    return "Гость"
-
-# --- ОСНОВНОЙ КОД ПРИЛОЖЕНИЯ ---
 def main(page: ft.Page):
-    page.title = "Flet Cloud Messenger"
-    page.bgcolor = "black"
+    # Настройки стиля "Терминал"
+    page.title = "C:\\SYSTEM\\CHAT.EXE"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.bgcolor = "#000000"
+    # Зеленый "фосфорный" шрифт
+    page.theme = ft.Theme(font_family="Courier New")
+    
+    # Генерируем уникальное имя для каждой новой вкладки/сессии
+    if not page.session.get("my_name"):
+        import random
+        anon_name = f"USER_{random.randint(100, 999)}"
+        page.session.set("my_name", anon_name)
 
-    # Загружаем ник из локального файла
-    user_name = get_local_name()
+    chat_display = ft.ListView(expand=True, spacing=5, auto_scroll=True)
 
-    chat_display = ft.Column(scroll="always", expand=True)
-    contacts_column = ft.Column()
-
-    # Вспомогательная функция для отрисовки сообщения в UI
-    def add_message_ui(user, text, is_history=False):
+    def add_msg(user, text, color="#00FF00"):
         chat_display.controls.append(
-            ft.Container(
-                content=ft.Column([
-                    ft.Text(user, size=10, color="blue" if not is_history else "grey", weight="bold"),
-                    ft.Text(text, size=14, color="white"),
-                ], spacing=2),
-                bgcolor="grey800", padding=8, border_radius=10,
+            ft.Text(
+                f"[{user}]:> {text}", 
+                color=color, 
+                font_family="Courier New",
+                size=14
             )
         )
-
-    # 1. ЗАГРУЗКА ИСТОРИИ ИЗ ОБЛАКА ПРИ СТАРТЕ
-    try:
-        response = supabase.table("messages").select("*").order("created_at").execute()
-        for msg in response.data:
-            add_message_ui(msg["user_name"], msg["text"], is_history=True)
-    except Exception as ex:
-        print(f"Ошибка загрузки истории: {ex}")
-
-    # 2. ОБРАБОТКА PUB/SUB (Обмен сообщениями в реальном времени)
-    def on_broadcast(data):
-        if data["type"] == "chat":
-            add_message_ui(data["user"], data["text"])
-        elif data["type"] == "join":
-            contacts_column.controls.append(ft.Text(f"● {data['user']}", color="green", size=12))
-            chat_display.controls.append(ft.Text(f" Пользователь {data['user']} вошел", size=10, italic=True, color="grey"))
         page.update()
 
-    page.pubsub.subscribe(on_broadcast)
+    # Загрузка истории
+    try:
+        res = supabase.table("messages").select("*").order("created_at").limit(20).execute()
+        for msg in res.data:
+            add_msg(msg["user_name"], msg["text"], color="#008800") # Старые сообщения чуть тусклее
+    except:
+        add_msg("SYSTEM", "DATABASE CONNECTION ERROR", color="red")
 
-    # 3. ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
-    name_input = ft.TextField(label="Твой ник", value=user_name, height=45, text_size=12)
-    msg_input = ft.TextField(hint_text="Сообщение...", expand=True)
+    def on_message(data):
+        if data["type"] == "chat" and data["session_id"] != page.session_id:
+            add_msg(data["user"], data["text"])
+
+    page.pubsub.subscribe(on_message)
+
+    # Поле ввода в стиле командной строки
+    msg_input = ft.TextField(
+        label="ENTER COMMAND",
+        label_style=ft.TextStyle(color="#00FF00"),
+        border_color="#00FF00",
+        color="#00FF00",
+        cursor_color="#00FF00",
+        expand=True,
+        on_submit=lambda _: send_click(None)
+    )
 
     def send_click(e):
         if msg_input.value:
-            current_user = get_local_name()
-            # Сохраняем в облачную базу Supabase
-            try:
-                supabase.table("messages").insert({
-                    "user_name": current_user,
-                    "text": msg_input.value
-                }).execute()
-            except Exception as ex:
-                print(f"Ошибка сохранения в базу: {ex}")
-
-            # Рассылаем всем, кто сейчас онлайн
+            my_name = page.session.get("my_name")
+            text = msg_input.value
+            
+            # Сохраняем в базу
+            supabase.table("messages").insert({"user_name": my_name, "text": text}).execute()
+            
+            # Показываем у себя
+            add_msg(my_name, text)
+            
+            # Отправляем другим
             page.pubsub.send_all({
                 "type": "chat", 
-                "user": current_user, 
-                "text": msg_input.value
+                "user": my_name, 
+                "text": text,
+                "session_id": page.session_id
             })
             msg_input.value = ""
             page.update()
 
-    def change_name_click(e):
-        if name_input.value:
-            save_local_name(name_input.value)
-            page.pubsub.send_all({"type": "join", "user": name_input.value})
-            page.update()
-
-    # 4. ИНТЕРФЕЙС
+    # Сборка интерфейса
     page.add(
+        ft.Text("--- TERMINAL CHAT v1.0 ONLINE ---", color="#00FF00", weight="bold"),
+        ft.Text(f"LOGGED IN AS: {page.session.get('my_name')}", color="#00FF00", size=12),
+        ft.Divider(color="#00FF00"),
+        ft.Container(content=chat_display, expand=True),
         ft.Row([
-            # Левая панель (Настройки ника и онлайн)
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("ПРОФИЛЬ", weight="bold", size=14, color="white"),
-                    name_input,
-                    ft.ElevatedButton("ОК", on_click=change_name_click),
-                    ft.Divider(),
-                    ft.Text("ОНЛАЙН", weight="bold", size=12, color="white"),
-                    contacts_column,
-                ], spacing=10),
-                width=180, bgcolor="grey900", padding=15
-            ),
-            # Правая панель (Чат)
-            ft.Column([
-                ft.Container(content=chat_display, expand=True, padding=10),
-                ft.Row([
-                    msg_input, 
-                    ft.IconButton(icon=ft.Icons.SEND, on_click=send_click, icon_color="blue")
-                ])
-            ], expand=True)
-        ], expand=True)
+            ft.Text(">", color="#00FF00", size=20),
+            msg_input,
+            ft.TextButton("EXECUTE", on_click=send_click, style=ft.ButtonStyle(color="#00FF00"))
+        ])
     )
 
-    # Уведомляем о входе
-    page.pubsub.send_all({"type": "join", "user": user_name})
-
-# ЗАПУСК (Настройки для Render)
 if __name__ == "__main__":
-    # На Render переменная PORT подставится автоматически
     port = int(os.getenv("PORT", 8080))
     ft.app(target=main, view=None, port=port)
