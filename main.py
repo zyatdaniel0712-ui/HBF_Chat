@@ -27,7 +27,7 @@ def main(page: ft.Page):
         ft.Text("--- TERMINAL READY ---", color="green"),
         ft.Text(f"LOGGED AS: {my_name}", color="green"),
         ft.Container(content=chat_display, expand=True),
-        ft.Row([msg_input, ft.IconButton(ft.icons.SEND, on_click=lambda _: send_msg())])
+        ft.Row([msg_input, ft.IconButton(ft.Icons.SEND, on_click=lambda _: send_msg())])
     )
     page.update()
 
