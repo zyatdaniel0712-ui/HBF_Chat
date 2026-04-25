@@ -5,23 +5,19 @@ import threading
 from supabase import create_client
 
 # --- 1. ТВОИ КЛЮЧИ ---
-URL = "https://nesxjcdhqgstahwfnrba.supabase.co" # Проверь, что тут твой URL
-KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             # Проверь, что тут твой KEY
+URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
+KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             
 supabase = create_client(URL, KEY)
 
 def main(page: ft.Page):
-    # Генерация ника для текущей сессии
     if not hasattr(page, "my_user_nick"):
-        page.my_user_nick = f"HACKER_{random.randint(1000, 9999)}"
+        page.my_user_nick = f"USER_{random.randint(1000, 9999)}"
     
     page.last_msg_id = 0
     page.title = "C:\\SYSTEM\\HBF-FLUD\\CHAT.EXE"
     page.bgcolor = "black"
 
-    # Список сообщений
     chat_display = ft.Column(scroll="always", expand=True)
-    
-    # Поле ввода
     msg_input = ft.TextField(
         label="TYPE COMMAND", 
         expand=True, 
@@ -29,10 +25,14 @@ def main(page: ft.Page):
         color="#00FF00"
     )
 
-    # Функция отрисовки сообщения (с поддержкой голубого Кевина)
     def render_msg(user, text, is_history=False):
-        if user.lower() == "кевин":
+        user_lower = user.lower()
+        
+        # Проверка особых ников
+        if user_lower == "Кевин":
             name_color = "cyan"
+        elif user_lower == "Хан" or user_lower == "Солвер":
+            name_color = "red"
         else:
             name_color = "#00FF00" if not is_history else "#008800"
             
@@ -41,7 +41,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # --- 3. ОБНОВЛЕНИЕ ---
     def check_updates():
         try:
             res = supabase.table("messages").select("*").gt("id", page.last_msg_id).order("id").execute()
@@ -54,23 +53,23 @@ def main(page: ft.Page):
             pass
         threading.Timer(3, check_updates).start()
 
-    # --- 4. ОТПРАВКА ---
     def send_msg(e):
         if msg_input.value:
             text = msg_input.value
             msg_input.value = ""
             try:
                 res = supabase.table("messages").insert({"user_name": page.my_user_nick, "text": text}).execute()
-                # Обработка ID для старых версий
+                # Безопасное получение ID для разных версий библиотеки
                 if isinstance(res.data, list) and len(res.data) > 0:
                     page.last_msg_id = res.data[0]["id"]
+                elif isinstance(res.data, dict):
+                    page.last_msg_id = res.data["id"]
                 
                 render_msg(page.my_user_nick, text)
             except:
                 chat_display.controls.append(ft.Text("!! DB ERROR", color="red"))
             page.update()
 
-    # --- 5. ИНТЕРФЕЙС ---
     def show_settings(e):
         page.controls.clear()
         name_edit = ft.TextField(label="EDIT NICKNAME", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
@@ -92,8 +91,6 @@ def main(page: ft.Page):
 
     def show_chat_ui():
         page.controls.clear()
-        
-        # СТАРЫЙ ДИЗАЙН: ВЕРХНЯЯ НАДПИСЬ
         header = ft.Column([
             ft.Text("--- TERMINAL CHAT SYSTEM v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
@@ -113,7 +110,6 @@ def main(page: ft.Page):
             ])
         )
         
-        # Загрузка истории при старте (один раз)
         if page.last_msg_id == 0:
             try:
                 res = supabase.table("messages").select("*").order("created_at").limit(10).execute()
@@ -125,7 +121,6 @@ def main(page: ft.Page):
 
     show_chat_ui()
     
-    # Запуск фонового процесса
     if not hasattr(page, "thread_running"):
         check_updates()
         page.thread_running = True
