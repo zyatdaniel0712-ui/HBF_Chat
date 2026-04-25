@@ -15,7 +15,7 @@ def main(page: ft.Page):
         page.my_user_nick = f"HACKER_{random.randint(1000, 9999)}"
     
     page.last_msg_id = 0
-    page.title = "C:\\SYSTEM\\HBF-CHAT\\CHAT.EXE"
+    page.title = "C:\\SYSTEM\\HBF-FLUD\\CHAT.EXE"
     page.bgcolor = "black"
 
     # Список сообщений
@@ -81,7 +81,6 @@ def main(page: ft.Page):
             show_chat_ui()
 
         page.add(
-            page.title = "C:\\SYSTEM\\HBF-CHAT\\SETTINGS.EXE",
             ft.Text("--- SETTINGS ---", color="#00FF00", size=18, weight="bold"),
             name_edit,
             ft.Row([
@@ -96,7 +95,6 @@ def main(page: ft.Page):
         
         # СТАРЫЙ ДИЗАЙН: ВЕРХНЯЯ НАДПИСЬ
         header = ft.Column([
-            page.title = "C:\\SYSTEM\\HBF-CHAT\\CHAT.EXE,
             ft.Text("--- TERMINAL CHAT SYSTEM v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
                 ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
