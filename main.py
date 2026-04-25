@@ -11,7 +11,7 @@ supabase = create_client(URL, KEY)
 
 def main(page: ft.Page):
     if not hasattr(page, "my_user_nick"):
-        page.my_user_nick = f"USER_{random.randint(1000, 9999)}"
+        page.my_user_nick = f"HACKER_{random.randint(1000, 9999)}"
     
     page.last_msg_id = 0
     page.title = "C:\\SYSTEM\\HBF-FLUD\\CHAT.EXE"
@@ -29,9 +29,9 @@ def main(page: ft.Page):
         user_lower = user.lower()
         
         # Проверка особых ников
-        if user_lower == "Кевин":
+        if user_lower == "кевин":
             name_color = "cyan"
-        elif user_lower == "Хан" or user_lower == "Солвер":
+        elif user_lower == "хан" or user_lower == "солвер":
             name_color = "red"
         else:
             name_color = "#00FF00" if not is_history else "#008800"
