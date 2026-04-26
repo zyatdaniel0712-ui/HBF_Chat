@@ -78,55 +78,52 @@ def main(page: ft.Page):
     def show_settings(e):
         page.controls.clear()
         
-        # Секция имени
         name_edit = ft.TextField(label="NEW ID", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
+        avatar_edit = ft.TextField(label="IMAGE URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
+
+        # Функция выбора (максимально простая)
+        def set_avatar(e):
+            avatar_edit.value = e.control.content.src # Берем ссылку из картинки внутри кнопки
+            page.update()
+
+        # Создаем список готовых аватарок через ImageButton (или Container)
+        presets = ft.Row(scroll="always")
+        
+        # Добавим 10 разных аватарок
+        for i in range(1, 11):
+            # Чередуем стили: роботы и пиксели
+            style = "bottts" if i % 2 == 0 else "pixel-art"
+            img_url = f"https://dicebear.com{style}/png?seed={i}"
+            
+            presets.controls.append(
+                ft.Container(
+                    content=ft.Image(src=img_url, width=50, height=50),
+                    on_click=set_avatar, # В старых версиях Container.on_click надежнее
+                    padding=5,
+                    border_radius=10,
+                )
+            )
+
         def save_name(e):
             page.my_user_nick = name_edit.value
-            page.snack_bar = ft.SnackBar(ft.Text("ID UPDATED"))
-            page.snack_bar.open = True
             page.update()
 
-        # Секция аватара
-        avatar_edit = ft.TextField(label="IMAGE URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
         def save_avatar(e):
             page.my_avatar_url = avatar_edit.value
-            page.snack_bar = ft.SnackBar(ft.Text("AVATAR UPDATED"))
-            page.snack_bar.open = True
             page.update()
-
-        def select_preset(e):
-            avatar_edit.value = e.control.data
-            page.update()
-
-        # Выбор готовых аватарок (роботы и пиксели)
-        presets = ft.Row(scroll="always")
-        for style in ["bottts", "pixel-art", "avataaars"]:
-            for i in range(1, 6):
-                url = f"https://dicebear.com{style}/png?seed={style}{i}"
-                presets.controls.append(
-                    ft.GestureDetector(
-                        content=ft.Image(src=url, width=50, height=50, border_radius=10),
-                        data=url,
-                        on_tap=select_preset
-                    )
-                )
 
         page.add(
-            ft.Text("--- USER CONFIGURATION ---", color="#00FF00", size=18, weight="bold"),
-            ft.Column([
-                ft.Text("IDENTITY:", color="#008800", size=10),
-                name_edit,
-                ft.ElevatedButton("SAVE NAME", on_click=save_name),
-            ]),
+            ft.Text("--- CONFIG ---", color="#00FF00", size=18),
+            ft.Text("ID:", color="#008800"),
+            name_edit,
+            ft.ElevatedButton("SAVE NAME", on_click=save_name),
             ft.Divider(color="#004400"),
-            ft.Column([
-                ft.Text("VISUAL CORE (SELECT OR PASTE URL):", color="#008800", size=10),
-                ft.Container(content=presets, padding=5, bgcolor="#0a0a0a"),
-                avatar_edit,
-                ft.ElevatedButton("SAVE AVATAR", on_click=save_avatar),
-            ]),
+            ft.Text("CHOOSE CORE:", color="#008800"),
+            ft.Container(content=presets, bgcolor="#111111", padding=10), # Обернули в контейнер для видимости
+            avatar_edit,
+            ft.ElevatedButton("SAVE AVATAR", on_click=save_avatar),
             ft.Divider(color="#004400"),
-            ft.ElevatedButton("RETURN TO TERMINAL", on_click=lambda _: show_chat_ui())
+            ft.ElevatedButton("RETURN", on_click=lambda _: show_chat_ui())
         )
         page.update()
 
