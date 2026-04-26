@@ -146,7 +146,6 @@ def main(page: ft.Page):
 
     show_chat_ui()
     
-    # Запуск фонового процесса (один раз)
     if not hasattr(page, "running"):
         check_updates()
         page.running = True
