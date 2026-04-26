@@ -26,7 +26,7 @@ def main(page: ft.Page):
     msg_input = ft.TextField(label="TYPE COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
 
     # ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ С КАРТИНКОЙ
-    def render_message(user, text, avatar_url=None, is_history=False):
+ def render_message(user, text, avatar_url=None, is_history=False):
         user_lower = user.lower()
         
         # 1. СПЕЦИАЛЬНЫЙ ВИД ДЛЯ СЕРВЕРА
@@ -40,12 +40,12 @@ def main(page: ft.Page):
                         size=12,
                         font_family="Courier New"
                     ),
-                    alignment="center",
+                    alignment="center", # ИСПРАВЛЕНО НА СТРОКУ
                     padding=10
                 )
             )
             page.update()
-            return # Выходим, чтобы не рисовать обычный бабл
+            return
 
         # 2. ЛОГИКА ЦВЕТОВ ДЛЯ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
         if user_lower == "кевин":
