@@ -20,7 +20,7 @@ def main(page: ft.Page):
     page.bgcolor = "black"
     page.theme = ft.Theme(font_family="Courier New")
 
-    chat_display = ft.ListView(expand=True, spacing=10, padding=10, bgcolor="black")
+    chat_display = ft.ListView(expand=True, spacing=10, padding=10)
     msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
 
     # --- ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ ---
@@ -123,29 +123,34 @@ def main(page: ft.Page):
 
     def show_chat_ui():
         page.controls.clear()
+        
         header = ft.Column([
-            ft.Text("--- TERMINAL CHAT SYSTEM v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
+            ft.Text("--- TERMINAL CHAT v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
                 ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
                 ft.IconButton(ft.Icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
             ], alignment="spaceBetween"),
             ft.Divider(color="#004400"),
         ])
+
+        # 2. Оборачиваем chat_display в Container с bgcolor="black"
+        chat_container = ft.Container(
+            content=chat_display,
+            expand=True,
+            bgcolor="black" # Вот здесь мы наконец-то красим фон в черный!
+        )
+
         page.add(
             header, 
-            ft.Container(content=chat_display, expand=True),
-            ft.Row([ft.Text(">", color="#00FF00"), msg_input, ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")])
+            chat_container, # Добавляем контейнер вместо чистого ListView
+            ft.Row([
+                ft.Text(">", color="#00FF00", size=20),
+                msg_input, 
+                ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")
+            ])
         )
-        
-        if page.last_msg_id == 0:
-            try:
-                res = supabase.table("messages").select("*").order("created_at").limit(10).execute()
-                for msg in res.data:
-                    render_msg(msg["user_name"], msg["text"], msg.get("avatar_url"), is_history=True)
-                    page.last_msg_id = msg["id"]
-            except: pass
         page.update()
-
+        
     show_chat_ui()
     if not hasattr(page, "thread_running"):
         check_updates()
