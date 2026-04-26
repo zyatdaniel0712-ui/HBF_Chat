@@ -111,16 +111,6 @@ def main(page: ft.Page):
             ], spacing=5),
             
             ft.Divider(color="#004400"),
-
-            # Секция аватара
-            ft.Column([
-                ft.Text("SECTION: VISUAL CORE", color="#008800", size=10),
-                ft.Text("Quick select:", color="#004400", size=10),
-                ft.Container(content=presets, padding=5),
-                avatar_edit,
-                ft.ElevatedButton("UPDATE IMAGE", on_click=save_avatar_only),
-            ], spacing=5),
-
             ft.Divider(color="#004400"),
             ft.ElevatedButton("RETURN TO TERMINAL", on_click=lambda _: show_chat_ui(), bgcolor="grey900")
         )
