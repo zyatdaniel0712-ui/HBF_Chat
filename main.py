@@ -89,7 +89,7 @@ def main(page: ft.Page):
         # СОЗДАЕМ ЛЕНТУ С ПРИНУДИТЕЛЬНОЙ ВЫСОТОЙ
         presets_list = ft.Row(scroll="always")
         
-        for i in range(1, 15):
+         for i in range(1, 15):
             img_url = f"https://dicebear.com{i}"
             presets_list.controls.append(
                 ft.Container(
@@ -97,12 +97,12 @@ def main(page: ft.Page):
                         src=img_url, 
                         width=60, 
                         height=60, 
-                        fit=ft.ImageFit.CONTAIN # Принудительно вписать
+                        fit="contain" # Исправлено на строку
                     ),
                     on_click=set_avatar,
                     padding=5,
-                    width=70,  # Явная ширина контейнера
-                    height=70, # Явная высота контейнера
+                    width=70,
+                    height=70,
                 )
             )
 
