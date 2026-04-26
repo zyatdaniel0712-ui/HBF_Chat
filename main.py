@@ -43,7 +43,7 @@ def main(page: ft.Page):
                     vertical_alignment="center",
                     spacing=10
                     ),
-                    bgcolor="#1c1c1c",
+                    bgcolor="#454545",
                     padding=ft.padding.all(10),
                     border_radius=15,
                     margin=ft.margin.only(bottom=5),
@@ -124,13 +124,14 @@ def main(page: ft.Page):
                 name_edit,
                 ft.ElevatedButton("UPDATE ID", on_click=save_name_only),
             ], spacing=5),
-
+            
+            ft.Divider(color="#004400"),
+            
             ft.Column([
                 avatar_edit,
                 ft.ElevatedButton("UPDATE IMAGE", on_click=save_avatar_only),
             ], spacing=5),
             
-            ft.Divider(color="#004400"),
             ft.Divider(color="#004400"),
             ft.ElevatedButton("RETURN TO TERMINAL", on_click=lambda _: show_chat_ui(), bgcolor="grey900")
         )
