@@ -29,23 +29,31 @@ def main(page: ft.Page):
         elif user_lower in ["хан", "солвер"]: name_color = "red"
         else: name_color = "#00FF00" if not is_history else "#008800"
 
-        img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
+        img_src = avatar_url if avatar_url else f"https://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fru.pngtree.com%2Ffree-backgrounds-photos%2F%25D0%25B0%25D0%25B2%25D0%25B0%25D1%2582%25D0%25B0%25D1%2580%25D0%25BA%25D0%25B0&ved=0CBYQjRxqFwoTCLD6076ui5QDFQAAAAAdAAAAABAG&opi=89978449"
 
-        # Создаем контейнер с серым фоном для каждого сообщения
+        # Создаем контейнер, который подстраивается под содержимое
         chat_display.controls.append(
-            ft.Container(
-                content=ft.Row([
-                    ft.Image(src=img_src, width=30, height=30, border_radius=15),
-                    ft.Text(f"[{user}]:> {text}", color=name_color, expand=True, font_family="Courier New")
-                ], vertical_alignment="center"),
-                bgcolor="#1c1c1c",    # ТЕМНО-СЕРЫЙ ФОН
-                padding=10,           # ОТСТУПЫ ВНУТРИ
-                border_radius=10,     # СКРУГЛЕНИЕ УГЛОВ
-                margin=ft.margin.only(bottom=5) # ОТСТУП МЕЖДУ СООБЩЕНИЯМИ
+            ft.Row([
+                ft.Container(
+                    content=ft.Row([
+                        ft.Image(src=img_src, width=30, height=30, border_radius=15),
+                        ft.Text(f"[{user}]:> {text}", color=name_color, font_family="Courier New")
+                    ], 
+                    tight=True, # Заставляет Row сжаться до размера контента
+                    vertical_alignment="center",
+                    spacing=10
+                    ),
+                    bgcolor="#1c1c1c",
+                    padding=ft.padding.all(10),
+                    border_radius=15,
+                    margin=ft.margin.only(bottom=5),
+                )
+            ], 
+            alignment=ft.MainAxisAlignment.START # Прижимает сообщение к левому краю
             )
         )
         page.update()
-
+        
     def check_updates():
         try:
             res = supabase.table("messages").select("*").gt("id", page.last_msg_id).order("id").execute()
@@ -116,6 +124,11 @@ def main(page: ft.Page):
                 name_edit,
                 ft.ElevatedButton("UPDATE ID", on_click=save_name_only),
             ], spacing=5),
+
+            ft.Column([
+                avatar_edit,
+                ft.ElevatedButton("UPDATE IMAGE", on_click=save_avatar_only),
+            ], spacing=5),
             
             ft.Divider(color="#004400"),
             ft.Divider(color="#004400"),
@@ -126,7 +139,7 @@ def main(page: ft.Page):
     def show_chat_ui():
         page.controls.clear()
         header = ft.Column([
-            ft.Text("--- TERMINAL CHAT v1.0 ---", color="#00FF00", size=18, weight="bold"),
+            ft.Text("--- TERMINAL CHAT ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
                 ft.Row([
                     ft.Image(src=page.my_avatar_url, width=20, height=20, border_radius=10),
