@@ -18,7 +18,7 @@ def main(page: ft.Page):
         page.my_avatar_url = f"https://dicebear.com{page.my_user_nick}"
     
     page.last_msg_id = 0
-    page.title = "C:\\SYSTEM\\CHAT.EXE"
+    page.title = "C:\\SYSTEM\\HBF-FLUD\\CHAT.EXE"
     page.bgcolor = "black"
     page.theme = ft.Theme(font_family="Courier New")
 
@@ -29,20 +29,35 @@ def main(page: ft.Page):
     def render_message(user, text, avatar_url=None, is_history=False):
         user_lower = user.lower()
         
-        # Определяем цвет ника
+        # 1. СПЕЦИАЛЬНЫЙ ВИД ДЛЯ СЕРВЕРА
+        if user_lower == "сервер" or user_lower == "server":
+            chat_display.controls.append(
+                ft.Container(
+                    content=ft.Text(
+                        f"SYSTEM NOTICE:> {text.upper()}", 
+                        color="yellow", 
+                        italic=True, 
+                        size=12,
+                        font_family="Courier New"
+                    ),
+                    alignment=ft.alignment.center,
+                    padding=10
+                )
+            )
+            page.update()
+            return # Выходим, чтобы не рисовать обычный бабл
+
+        # 2. ЛОГИКА ЦВЕТОВ ДЛЯ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
         if user_lower == "кевин":
             main_color = "cyan"
         elif user_lower == "хан" or user_lower == "солвер":
             main_color = "red"
-        elif user_lower == "сервер":
-            main_color = "red"
         else:
             main_color = "#00FF00" if not is_history else "#008800"
 
-        # Если ссылки нет, генерируем робота
         img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
 
-        # Собираем бабл сообщения с серым фоном
+        # 3. ОБЫЧНЫЙ БАБЛ СООБЩЕНИЯ
         chat_display.controls.append(
             ft.Row([
                 ft.Container(
