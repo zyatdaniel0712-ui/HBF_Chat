@@ -88,25 +88,27 @@ def main(page: ft.Page):
         threading.Timer(3, check_updates).start()
 
     # --- ЛОГИКА ОТПРАВКИ ---
-    def send_msg(e):
+       def send_msg(e):
         if msg_input.value:
             text = msg_input.value
             msg_input.value = ""
+            # Берем ник
+            raw_name = page.my_user_nick 
+            
             try:
-                # Отправляем ник, текст и текущую ссылку на аву
-                res = supabase.table("messages").insert({
-                    "user_name": page.my_user_nick, 
+                # Отправляем в базу
+                supabase.table("messages").insert({
+                    "user_name": raw_name, 
                     "text": text,
                     "avatar_url": page.my_avatar_url
                 }).execute()
                 
-                data = res.data
-                new_id = data[0]["id"] if isinstance(data, list) else data["id"]
-                page.last_msg_id = new_id
-                
-                render_message(page.my_user_nick, text, page.my_avatar_url)
-            except:
-                chat_display.controls.append(ft.Text("!! DB ERROR", color="red"))
+                # Показываем у себя на экране
+                render_message(raw_name, text, page.my_avatar_url)
+            except Exception as ex:
+                # Если ошибка - выведи её в консоль Render, чтобы понять причину
+                print(f"DATABASE ERROR: {ex}") 
+                chat_display.controls.append(ft.Text(f"!! DB ERROR: {ex}", color="red", size=10))
             page.update()
 
     # --- СТРАНИЦА НАСТРОЕК (РАЗДЕЛЬНАЯ) ---
