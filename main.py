@@ -4,17 +4,17 @@ import random
 import threading
 from supabase import create_client
 
-# --- 1. ТВОИ КЛЮЧИ ---
+# --- 1. НАСТРОЙКИ ОБЛАКА ---
 URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
 KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             
 supabase = create_client(URL, KEY)
 
 def main(page: ft.Page):
-    # Инициализация (используем атрибуты page, так как client_storage может не работать)
+    # Инициализация переменных сессии
     if not hasattr(page, "my_user_nick"):
         page.my_user_nick = f"USER_{random.randint(1000, 9999)}"
     if not hasattr(page, "my_avatar_url"):
-        page.my_avatar_url = f"https://dicebear.com{page.my_user_nick}"
+        page.my_avatar_url = f"https://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fru.pngtree.com%2Ffree-backgrounds-photos%2F%25D0%25B0%25D0%25B2%25D0%25B0%25D1%2582%25D0%25B0%25D1%2580%25D0%25BA%25D0%25B0&ved=0CBYQjRxqFwoTCLD6076ui5QDFQAAAAAdAAAAABAG&opi=89978449"
     
     page.last_msg_id = 0
     page.bgcolor = "black"
@@ -26,7 +26,7 @@ def main(page: ft.Page):
     def render_msg(user, text, avatar_url, is_history=False):
         user_lower = user.lower()
         if user_lower == "кевин": name_color = "cyan"
-        elif user_lower == "хан" or user_lower == "солвер": name_color = "red"
+        elif user_lower in ["хан", "солвер"]: name_color = "red"
         else: name_color = "#00FF00" if not is_history else "#008800"
 
         img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
@@ -64,56 +64,77 @@ def main(page: ft.Page):
             except: pass
             page.update()
 
-    # --- СТРАНИЦА НАСТРОЕК ---
+    # --- СТРАНИЦА НАСТРОЕК (РАЗДЕЛЬНОЕ СОХРАНЕНИЕ) ---
     def show_settings(e):
         page.controls.clear()
         
-        name_edit = ft.TextField(label="NICKNAME", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
-        avatar_edit = ft.TextField(label="AVATAR URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
+        # Блок 1: ИМЯ
+        name_edit = ft.TextField(label="NEW ID", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
+        def save_name_only(e):
+            page.my_user_nick = name_edit.value
+            page.snack_bar = ft.SnackBar(ft.Text("ID UPDATED"), bgcolor="green")
+            page.snack_bar.open = True
+            page.update()
 
-        # Функция выбора готовой аватарки
+        # Блок 2: АВАТАРКА
+        avatar_edit = ft.TextField(label="IMAGE URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
+        def save_avatar_only(e):
+            page.my_avatar_url = avatar_edit.value
+            page.snack_bar = ft.SnackBar(ft.Text("AVATAR UPDATED"), bgcolor="green")
+            page.snack_bar.open = True
+            page.update()
+
+        # Пресеты для быстрого выбора
         def select_preset(e):
             avatar_edit.value = e.control.data
             page.update()
 
-        # Создаем список готовых роботов для выбора
         presets = ft.Row(scroll="always")
-        for i in range(1, 11):
-            url = f"https://dicebear.comRobot{i}"
+        for type in ["pixel-art", "bottts", "avataaars"]:
+            url = f"https://dicebear.com{type}/png?seed={random.randint(1,100)}"
             presets.controls.append(
                 ft.GestureDetector(
-                    content=ft.Image(src=url, width=50, height=50, border_radius=10),
+                    content=ft.Image(src=url, width=60, height=60, border_radius=10),
                     data=url,
                     on_tap=select_preset
                 )
             )
 
-        # ЕДИНАЯ КНОПКА СОХРАНЕНИЯ
-        def save_all(e):
-            page.my_user_nick = name_edit.value
-            page.my_avatar_url = avatar_edit.value
-            show_chat_ui()
-
         page.add(
-            ft.Text("--- SYSTEM CONFIG ---", color="#00FF00", size=18, weight="bold"),
-            name_edit,
-            ft.Text("SELECT PRESET ROBOT:", color="#008800", size=12),
-            ft.Container(content=presets, padding=10, bgcolor="#111111", border_radius=10),
-            avatar_edit,
-            ft.Row([
-                ft.ElevatedButton("SAVE ALL CHANGES", on_click=save_all),
-                ft.ElevatedButton("BACK", on_click=lambda _: show_chat_ui())
-            ])
+            ft.Text("--- USER CONFIGURATION ---", color="#00FF00", size=18, weight="bold"),
+            
+            # Секция имени
+            ft.Column([
+                ft.Text("SECTION: IDENTITY", color="#008800", size=10),
+                name_edit,
+                ft.ElevatedButton("UPDATE ID", on_click=save_name_only),
+            ], spacing=5),
+            
+            ft.Divider(color="#004400"),
+
+            # Секция аватара
+            ft.Column([
+                ft.Text("SECTION: VISUAL CORE", color="#008800", size=10),
+                ft.Text("Quick select:", color="#004400", size=10),
+                ft.Container(content=presets, padding=5),
+                avatar_edit,
+                ft.ElevatedButton("UPDATE IMAGE", on_click=save_avatar_only),
+            ], spacing=5),
+
+            ft.Divider(color="#004400"),
+            ft.ElevatedButton("RETURN TO TERMINAL", on_click=lambda _: show_chat_ui(), bgcolor="grey900")
         )
         page.update()
 
     def show_chat_ui():
         page.controls.clear()
         header = ft.Column([
-            ft.Text("--- TERMINAL CHAT ---", color="#00FF00", size=18, weight="bold"),
+            ft.Text("--- TERMINAL CHAT v1.0 ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
-                ft.Image(src=page.my_avatar_url, width=20, height=20, border_radius=10),
-                ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
+                ft.Row([
+                    ft.Image(src=page.my_avatar_url, width=20, height=20, border_radius=10),
+                    ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
+                ]),
                 ft.IconButton(ft.Icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
             ], alignment="spaceBetween"),
             ft.Divider(color="#004400"),
