@@ -89,7 +89,7 @@ def main(page: ft.Page):
         # СОЗДАЕМ ЛЕНТУ С ПРИНУДИТЕЛЬНОЙ ВЫСОТОЙ
         presets_list = ft.Row(scroll="always")
         
-         for i in range(1, 15):
+        for i in range(1, 15):
             img_url = f"https://dicebear.com{i}"
             presets_list.controls.append(
                 ft.Container(
@@ -105,7 +105,7 @@ def main(page: ft.Page):
                     height=70,
                 )
             )
-
+            
         def save_name(e):
             page.my_user_nick = name_edit.value
             page.update()
