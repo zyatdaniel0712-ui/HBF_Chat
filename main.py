@@ -88,7 +88,7 @@ def main(page: ft.Page):
         threading.Timer(3, check_updates).start()
 
     # --- ЛОГИКА ОТПРАВКИ ---
-       def send_msg(e):
+    def send_msg(e):
         if msg_input.value:
             text = msg_input.value
             msg_input.value = ""
