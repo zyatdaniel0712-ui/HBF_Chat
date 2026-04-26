@@ -31,11 +31,18 @@ def main(page: ft.Page):
 
         img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
 
+        # Создаем контейнер с серым фоном для каждого сообщения
         chat_display.controls.append(
-            ft.Row([
-                ft.Image(src=img_src, width=30, height=30, border_radius=15),
-                ft.Text(f"[{user}]:> {text}", color=name_color, expand=True)
-            ])
+            ft.Container(
+                content=ft.Row([
+                    ft.Image(src=img_src, width=30, height=30, border_radius=15),
+                    ft.Text(f"[{user}]:> {text}", color=name_color, expand=True, font_family="Courier New")
+                ], vertical_alignment="center"),
+                bgcolor="#1c1c1c",    # ТЕМНО-СЕРЫЙ ФОН
+                padding=10,           # ОТСТУПЫ ВНУТРИ
+                border_radius=10,     # СКРУГЛЕНИЕ УГЛОВ
+                margin=ft.margin.only(bottom=5) # ОТСТУП МЕЖДУ СООБЩЕНИЯМИ
+            )
         )
         page.update()
 
