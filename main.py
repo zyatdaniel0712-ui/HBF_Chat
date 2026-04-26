@@ -40,7 +40,7 @@ def main(page: ft.Page):
                         size=12,
                         font_family="Courier New"
                     ),
-                    alignment=ft.alignment.center,
+                    alignment="center",
                     padding=10
                 )
             )
