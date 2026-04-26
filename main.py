@@ -43,7 +43,7 @@ def main(page: ft.Page):
                     vertical_alignment="center",
                     spacing=10
                     ),
-                    bgcolor="#454545",
+                    bgcolor="#373737",
                     padding=ft.padding.all(10),
                     border_radius=15,
                     margin=ft.margin.only(bottom=5),
