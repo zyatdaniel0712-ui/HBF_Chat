@@ -81,26 +81,28 @@ def main(page: ft.Page):
         name_edit = ft.TextField(label="NEW ID", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
         avatar_edit = ft.TextField(label="IMAGE URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
 
-        # Функция выбора (максимально простая)
         def set_avatar(e):
-            avatar_edit.value = e.control.content.src # Берем ссылку из картинки внутри кнопки
+            # В старой версии Flet достаем ссылку из вложенного Image
+            avatar_edit.value = e.control.content.src 
             page.update()
 
-        # Создаем список готовых аватарок через ImageButton (или Container)
-        presets = ft.Row(scroll="always")
+        # СОЗДАЕМ ЛЕНТУ С ПРИНУДИТЕЛЬНОЙ ВЫСОТОЙ
+        presets_list = ft.Row(scroll="always")
         
-        # Добавим 10 разных аватарок
-        for i in range(1, 11):
-            # Чередуем стили: роботы и пиксели
-            style = "bottts" if i % 2 == 0 else "pixel-art"
-            img_url = f"https://dicebear.com{style}/png?seed={i}"
-            
-            presets.controls.append(
+        for i in range(1, 15):
+            img_url = f"https://dicebear.com{i}"
+            presets_list.controls.append(
                 ft.Container(
-                    content=ft.Image(src=img_url, width=50, height=50),
-                    on_click=set_avatar, # В старых версиях Container.on_click надежнее
+                    content=ft.Image(
+                        src=img_url, 
+                        width=60, 
+                        height=60, 
+                        fit=ft.ImageFit.CONTAIN # Принудительно вписать
+                    ),
+                    on_click=set_avatar,
                     padding=5,
-                    border_radius=10,
+                    width=70,  # Явная ширина контейнера
+                    height=70, # Явная высота контейнера
                 )
             )
 
@@ -113,20 +115,29 @@ def main(page: ft.Page):
             page.update()
 
         page.add(
-            ft.Text("--- CONFIG ---", color="#00FF00", size=18),
-            ft.Text("ID:", color="#008800"),
-            name_edit,
-            ft.ElevatedButton("SAVE NAME", on_click=save_name),
+            ft.Text("--- CONFIGURATION ---", color="#00FF00", size=18),
+            ft.Column([
+                ft.Text("ID:", color="#008800"),
+                name_edit,
+                ft.ElevatedButton("SAVE NAME", on_click=save_name),
+            ]),
             ft.Divider(color="#004400"),
-            ft.Text("CHOOSE CORE:", color="#008800"),
-            ft.Container(content=presets, bgcolor="#111111", padding=10), # Обернули в контейнер для видимости
+            ft.Text("SELECT CORE VISUAL:", color="#008800"),
+            # ОГРАНИЧИВАЕМ ВЫСОТУ КОНТЕЙНЕРА, чтобы он не исчез
+            ft.Container(
+                content=presets_list, 
+                bgcolor="#111111", 
+                height=100, 
+                padding=10,
+                border_radius=10
+            ),
             avatar_edit,
             ft.ElevatedButton("SAVE AVATAR", on_click=save_avatar),
             ft.Divider(color="#004400"),
             ft.ElevatedButton("RETURN", on_click=lambda _: show_chat_ui())
         )
         page.update()
-
+      
     def show_chat_ui():
         page.controls.clear()
         header = ft.Column([
