@@ -20,41 +20,34 @@ def main(page: ft.Page):
     page.bgcolor = "black"
     page.theme = ft.Theme(font_family="Courier New")
 
-    chat_display = ft.Column(scroll="always", expand=True)
+    chat_display = ft.ListView(expand=True, spacing=10, padding=10, bgcolor="black")
     msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
 
     # --- ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ ---
+   
     def render_msg(user, text, avatar_url=None, is_history=False):
         user_lower = user.lower()
         
-        # 1. СПЕЦИАЛЬНЫЙ ВИД ДЛЯ СЕРВЕРА
+        # 1. Системное сообщение от Сервера
         if user_lower == "сервер" or user_lower == "server":
             chat_display.controls.append(
                 ft.Container(
-                    content=ft.Text(
-                        f"SYSTEM NOTICE:> {text.upper()}", 
-                        color="yellow", 
-                        italic=True, 
-                        size=12
-                    ),
-                    alignment="center", # Используем строку вместо ft.alignment.center
+                    content=ft.Text(f"SYSTEM NOTICE:> {text.upper()}", color="yellow", italic=True, size=12),
+                    alignment="center",
                     padding=10
                 )
             )
             page.update()
             return
 
-        # 2. ЛОГИКА ЦВЕТОВ ДЛЯ ОБЫЧНЫХ НИКОВ
-        if user_lower == "кевин":
-            name_color = "cyan"
-        elif user_lower in ["хан", "солвер"]:
-            name_color = "red"
-        else:
-            name_color = "#00FF00" if not is_history else "#008800"
+        # 2. Цвета ников
+        if user_lower == "кевин": name_color = "cyan"
+        elif user_lower in ["хан", "солвер"]: name_color = "red"
+        else: name_color = "#00FF00" if not is_history else "#008800"
 
         img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
 
-        # 3. ОБЫЧНЫЙ БАБЛ СООБЩЕНИЯ
+        # 3. Бабл сообщения (теперь он не растянет серый фон на весь экран)
         chat_display.controls.append(
             ft.Row([
                 ft.Container(
@@ -62,12 +55,11 @@ def main(page: ft.Page):
                         ft.Image(src=img_src, width=30, height=30, border_radius=15),
                         ft.Text(f"[{user}]:> {text}", color=name_color, font_family="Courier New")
                     ], tight=True, vertical_alignment="center", spacing=10),
-                    bgcolor="#1c1c1c",
+                    bgcolor="#121212", # Очень темно-серый, почти черный
                     padding=10,
                     border_radius=15,
-                    margin=ft.margin.only(bottom=5),
                 )
-            ], alignment="start") # Используем строку вместо ft.MainAxisAlignment.START
+            ], alignment="start")
         )
         page.update()
 
