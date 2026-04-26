@@ -24,21 +24,34 @@ def main(page: ft.Page):
     msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
 
     # Функция отрисовки сообщения (баблы с серым фоном по длине текста)
-    def render_msg(user, text, avatar_url, is_history=False):
+   def render_msg(user, text, avatar_url=None, is_history=False):
         user_lower = user.lower()
-        if user_lower == "кевин": name_color = "cyan"
-        elif user_lower in ["хан", "солвер"]: name_color = "red"
-        elif user_lower in ["система"]: name_color = "black"
-        else: name_color = "#00FF00" if not is_history else "#008800"
+        
+        # Выбираем цвет ника и кружочка
+        if user_lower == "кевин": 
+            color = "cyan"
+        elif user_lower in ["хан", "солвер"]: 
+            color = "red"
+        else: 
+            color = "#00FF00" if not is_history else "#008800"
 
-        img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
+        # СОЗДАЕМ ТЕКСТОВУЮ АВАТАРКУ (Первая буква имени)
+        first_letter = user[0].upper() if user else "?"
+        avatar = ft.Container(
+            content=ft.Text(first_letter, color="black", weight="bold", size=12),
+            bgcolor=color, # Кружок того же цвета, что и ник
+            width=30,
+            height=30,
+            border_radius=15,
+            alignment=ft.alignment.center
+        )
 
         chat_display.controls.append(
             ft.Row([
                 ft.Container(
                     content=ft.Row([
-                        ft.Image(src=img_src, width=30, height=30, border_radius=15),
-                        ft.Text(f"[{user}]:> {text}", color=name_color, font_family="Courier New")
+                        avatar, # Наша буква вместо картинки
+                        ft.Text(f"[{user}]:> {text}", color=color, font_family="Courier New")
                     ], tight=True, vertical_alignment="center", spacing=10),
                     bgcolor="#1c1c1c",
                     padding=10,
@@ -85,26 +98,6 @@ def main(page: ft.Page):
             # В старой версии Flet достаем ссылку из вложенного Image
             avatar_edit.value = e.control.content.src 
             page.update()
-
-        # СОЗДАЕМ ЛЕНТУ С ПРИНУДИТЕЛЬНОЙ ВЫСОТОЙ
-        presets_list = ft.Row(scroll="always")
-        
-        for i in range(1, 15):
-            img_url = f"https://dicebear.com{i}"
-            presets_list.controls.append(
-                ft.Container(
-                    content=ft.Image(
-                        src=img_url, 
-                        width=60, 
-                        height=60, 
-                        fit="contain" # Исправлено на строку
-                    ),
-                    on_click=set_avatar,
-                    padding=5,
-                    width=70,
-                    height=70,
-                )
-            )
             
         def save_name(e):
             page.my_user_nick = name_edit.value
@@ -121,16 +114,6 @@ def main(page: ft.Page):
                 name_edit,
                 ft.ElevatedButton("SAVE NAME", on_click=save_name),
             ]),
-            ft.Divider(color="#004400"),
-            ft.Text("SELECT CORE VISUAL:", color="#008800"),
-            # ОГРАНИЧИВАЕМ ВЫСОТУ КОНТЕЙНЕРА, чтобы он не исчез
-            ft.Container(
-                content=presets_list, 
-                bgcolor="#111111", 
-                height=100, 
-                padding=10,
-                border_radius=10
-            ),
             avatar_edit,
             ft.ElevatedButton("SAVE AVATAR", on_click=save_avatar),
             ft.Divider(color="#004400"),
