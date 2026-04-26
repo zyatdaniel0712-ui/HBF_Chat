@@ -5,8 +5,8 @@ import threading
 from supabase import create_client
 
 # --- 1. ТВОИ КЛЮЧИ ---
-URL = "https://supabase.co" 
-KEY = "your-anon-key"             
+URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
+KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             
 supabase = create_client(URL, KEY)
 
 def main(page: ft.Page):
