@@ -20,9 +20,21 @@ def main(page: ft.Page):
     page.title = "C:\\SYSTEM\\HBF-CHAT\\CHAT.EXE"
     page.bgcolor = "black"
 
+    def flicker():
+        while True:
+            # Меняем прозрачность от 0.8 до 1.0
+            chat_container.opacity = 0.9 if chat_container.opacity == 1.0 else 1.0
+            try:
+                page.update()
+            except:
+                break
+            import time
+            time.sleep(0.1) # Скорость мерцания
+
     # Список сообщений без фона (чтобы не было ошибки)
     chat_display = ft.ListView(expand=True, spacing=10, padding=10)
     msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
+    threading.Thread(target=flicker, daemon=True).start()
 
     # --- ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ ---
     def render_msg(user, text, avatar_url=None, is_history=False):
@@ -115,16 +127,23 @@ def main(page: ft.Page):
     def show_chat_ui():
         page.controls.clear()
         header = ft.Column([
-            ft.Text("--- TERMINAL CHAT SYSTEM v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
+            ft.Text("--- TERMINAL CHAT v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
                 ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
-                ft.IconButton(ft.Icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
+                ft.IconButton(ft.icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
             ], alignment="spaceBetween"),
             ft.Divider(color="#004400"),
         ])
 
-        # Оборачиваем чат в черный контейнер, чтобы убрать серый фон
-        chat_container = ft.Container(content=chat_display, expand=True, bgcolor="black")
+        # Создаем контейнер с поддержкой анимации
+        global chat_container # Делаем глобальным, чтобы функция flicker его видела
+        chat_container = ft.Container(
+            content=chat_display,
+            expand=True,
+            bgcolor="black",
+            opacity=1.0,
+            animate_opacity=100 # Анимация смены прозрачности за 100мс
+        )
 
         page.add(
             header, 
@@ -132,17 +151,9 @@ def main(page: ft.Page):
             ft.Row([
                 ft.Text(">", color="#00FF00", size=20),
                 msg_input, 
-                ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")
+                ft.IconButton(ft.icons.SEND, on_click=send_msg, icon_color="#00FF00")
             ])
         )
-        
-        if page.last_msg_id == 0:
-            try:
-                res = supabase.table("messages").select("*").order("created_at").limit(10).execute()
-                for msg in res.data:
-                    render_msg(msg["user_name"], msg["text"], msg.get("avatar_url"), is_history=True)
-                    page.last_msg_id = msg["id"]
-            except: pass
         page.update()
 
     show_chat_ui()
