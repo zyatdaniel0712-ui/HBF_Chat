@@ -2,57 +2,58 @@ import flet as ft
 import os
 import random
 import threading
+import time
 from supabase import create_client
 
-# --- 1. НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ) ---
+# --- 1. НАСТРОЙКИ ОБЛАКА ---
 URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
 KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             
 supabase = create_client(URL, KEY)
 
 def main(page: ft.Page):
-    # Инициализация ника в памяти страницы
+    # Инициализация ника
     if not hasattr(page, "my_user_nick"):
         page.my_user_nick = f"USER_{random.randint(1000, 9999)}"
     if not hasattr(page, "my_avatar_url"):
         page.my_avatar_url = f"https://dicebear.com{page.my_user_nick}"
     
     page.last_msg_id = 0
-    page.title = "C:\\SYSTEM\\HBF-CHAT\\CHAT.EXE"
+    page.title = "C:\\SYSTEM\\FLUD\\CHAT.EXE"
     page.bgcolor = "black"
+    page.theme = ft.Theme(font_family="Courier New")
 
-    def flicker():
-        while True:
-            # Меняем прозрачность от 0.8 до 1.0
-            chat_container.opacity = 0.9 if chat_container.opacity == 1.0 else 1.0
-            try:
-                page.update()
-            except:
-                break
-            import time
-            time.sleep(0.1) # Скорость мерцания
-
-    # Список сообщений без фона (чтобы не было ошибки)
     chat_display = ft.ListView(expand=True, spacing=10, padding=10)
     msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
-    threading.Thread(target=flicker, daemon=True).start()
 
-    # --- ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ ---
+    # Создаем контейнер чата заранее, чтобы к нему был доступ из функции мерцания
+    # animate_opacity=150 делает мерцание мягким
+    chat_container = ft.Container(
+        content=chat_display,
+        expand=True,
+        bgcolor="black",
+        opacity=1.0,
+        animate_opacity=150 
+    )
+
+    # --- ЭФФЕКТ МЕРЦАНИЯ ---
+    def flicker():
+        while True:
+            try:
+                # Слегка меняем яркость (прозрачность)
+                chat_container.opacity = 0.85 if chat_container.opacity == 1.0 else 1.0
+                page.update()
+                time.sleep(random.uniform(0.1, 0.3)) # Случайные интервалы для реализма
+            except:
+                break
+
     def render_msg(user, text, avatar_url=None, is_history=False):
         user_lower = user.lower()
-        
-        # Логика цветов для ников
-        if user_lower == "кевин":
-            name_color = "cyan"
-        elif user_lower in ["хан", "солвер"]:
-            name_color = "red"
-        elif user_lower in ["сервер"]:
-            name_color = "black"
-        else:
-            name_color = "#00FF00" if not is_history else "#008800"
+        if user_lower == "кевин": name_color = "cyan"
+        elif user_lower in ["хан", "солвер"]: name_color = "red"
+        else: name_color = "#00FF00" if not is_history else "#008800"
 
         img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
 
-        # Создаем бабл сообщения
         chat_display.controls.append(
             ft.Row([
                 ft.Container(
@@ -68,7 +69,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # --- ОБНОВЛЕНИЕ ЧАТА (Polling) ---
     def check_updates():
         try:
             res = supabase.table("messages").select("*").gt("id", page.last_msg_id).order("id").execute()
@@ -80,7 +80,6 @@ def main(page: ft.Page):
         except: pass
         threading.Timer(3, check_updates).start()
 
-    # --- ОТПРАВКА ---
     def send_msg(e):
         if msg_input.value:
             text = msg_input.value
@@ -92,7 +91,7 @@ def main(page: ft.Page):
                     "avatar_url": page.my_avatar_url 
                 }).execute()
                 
-                # Обновляем ID последнего сообщения
+                # Обновляем ID
                 data = res.data
                 new_id = data[0]["id"] if isinstance(data, list) else data["id"]
                 page.last_msg_id = new_id
@@ -101,7 +100,6 @@ def main(page: ft.Page):
             except: pass
             page.update()
 
-    # --- ИНТЕРФЕЙС ---
     def show_settings(e):
         page.controls.clear()
         name_edit = ft.TextField(label="NEW ID", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
@@ -116,11 +114,11 @@ def main(page: ft.Page):
             page.update()
 
         page.add(
-            ft.Text("--- CONFIGURATION ---", color="#00FF00", size=18, weight="bold"),
+            ft.Text("--- SETTINGS ---", color="#00FF00", size=18, weight="bold"),
             name_edit, ft.ElevatedButton("SAVE NAME", on_click=save_name),
             ft.Divider(color="#004400"),
             avatar_edit, ft.ElevatedButton("SAVE AVATAR", on_click=save_avatar),
-            ft.ElevatedButton("BACK TO TERMINAL", on_click=lambda _: show_chat_ui())
+            ft.ElevatedButton("BACK", on_click=lambda _: show_chat_ui())
         )
         page.update()
 
@@ -135,31 +133,32 @@ def main(page: ft.Page):
             ft.Divider(color="#004400"),
         ])
 
-        # Создаем контейнер с поддержкой анимации
-        global chat_container # Делаем глобальным, чтобы функция flicker его видела
-        chat_container = ft.Container(
-            content=chat_display,
-            expand=True,
-            bgcolor="black",
-            opacity=1.0,
-            animate_opacity=100 # Анимация смены прозрачности за 100мс
-        )
-
         page.add(
             header, 
-            chat_container,
+            chat_container, # Контейнер с анимацией
             ft.Row([
                 ft.Text(">", color="#00FF00", size=20),
                 msg_input, 
                 ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")
             ])
         )
+        
+        if page.last_msg_id == 0:
+            try:
+                res = supabase.table("messages").select("*").order("created_at").limit(10).execute()
+                for msg in res.data:
+                    render_msg(msg["user_name"], msg["text"], msg.get("avatar_url"), is_history=True)
+                    page.last_msg_id = msg["id"]
+            except: pass
         page.update()
 
     show_chat_ui()
-    if not hasattr(page, "thread_running"):
+    
+    # Запуск фоновых потоков
+    if not hasattr(page, "started"):
+        threading.Thread(target=flicker, daemon=True).start()
         check_updates()
-        page.thread_running = True
+        page.started = True
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
