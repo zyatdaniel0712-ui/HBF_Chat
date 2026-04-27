@@ -63,7 +63,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-
     # Фоновая проверка новых сообщений
     def check_updates():
         try:
