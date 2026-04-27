@@ -130,7 +130,7 @@ def main(page: ft.Page):
             ft.Text("--- TERMINAL CHAT v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
             ft.Row([
                 ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
-                ft.IconButton(ft.icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
+                ft.IconButton(ft.Icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
             ], alignment="spaceBetween"),
             ft.Divider(color="#004400"),
         ])
@@ -151,7 +151,7 @@ def main(page: ft.Page):
             ft.Row([
                 ft.Text(">", color="#00FF00", size=20),
                 msg_input, 
-                ft.IconButton(ft.icons.SEND, on_click=send_msg, icon_color="#00FF00")
+                ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")
             ])
         )
         page.update()
