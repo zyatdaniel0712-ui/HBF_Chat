@@ -306,7 +306,7 @@ def main(page: ft.Page):
                         avatar_preview,
 
                         ft.IconButton(
-                            icon=ft.icons.PERSON,
+                            icon=ft.icons.SEND,
                             icon_color="#00FF00",
                             on_click=open_avatar_picker,
                         )
