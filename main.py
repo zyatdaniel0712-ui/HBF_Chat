@@ -266,7 +266,7 @@ def main(page: ft.Page):
                         border_radius=20,
                         bgcolor="#111111",
 
-                        alignment=ft.alignment.center,
+                        alignment="center",
 
                         content=ft.CircleAvatar(
                             foreground_image_url=avatar,
