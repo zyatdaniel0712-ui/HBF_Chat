@@ -75,7 +75,7 @@ def main(page: ft.Page):
     # =========================================
 
     avatar_preview = ft.CircleAvatar(
-        foreground_image_url=page.my_avatar,
+        foreground_image_src=page.my_avatar,
         radius=22,
     )
 
@@ -158,7 +158,7 @@ def main(page: ft.Page):
                 controls=[
 
                     ft.CircleAvatar(
-                        foreground_image_url=avatar,
+                        foreground_image_src=avatar,
                         radius=20,
                     ),
 
@@ -246,7 +246,7 @@ def main(page: ft.Page):
 
                 page.my_avatar = selected
 
-                avatar_preview.foreground_image_url = selected
+                avatar_preview.foreground_image_src = selected
 
                 avatar_dialog.open = False
 
