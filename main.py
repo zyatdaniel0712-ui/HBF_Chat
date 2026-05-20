@@ -306,7 +306,7 @@ def main(page: ft.Page):
                         avatar_preview,
 
                         ft.IconButton(
-                            icon=ft.icons.SEND,
+                            icon=ft.Icons.SEND,
                             icon_color="#00FF00",
                             on_click=open_avatar_picker,
                         )
@@ -333,7 +333,7 @@ def main(page: ft.Page):
                 msg_input,
 
                 ft.IconButton(
-                    icon=ft.icons.SEND,
+                    icon=ft.Icons.SEND,
                     icon_color="#00FF00",
                     on_click=send_msg,
                 )
