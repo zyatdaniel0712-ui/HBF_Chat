@@ -1,6 +1,7 @@
 import flet as ft
 import random
 import asyncio
+import os
 from supabase import create_client
 
 # =========================================
