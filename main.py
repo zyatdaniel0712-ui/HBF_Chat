@@ -269,7 +269,7 @@ def main(page: ft.Page):
                         alignment="center",
 
                         content=ft.CircleAvatar(
-                            foreground_image_url=avatar,
+                            foreground_image_src=avatar,
                             radius=28,
                         )
                     )
