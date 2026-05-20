@@ -251,7 +251,7 @@ def main(page: ft.Page):
             avatar_dialog.content.controls.append(
 
                 ft.ElevatedButton(
-                    text=f"Аватар {avatar.split('=')[-1]}",
+                    f"Аватар {avatar.split('=')[-1]}",
                     on_click=select
                 )
             )
