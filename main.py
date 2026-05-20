@@ -79,9 +79,9 @@ def main(page: ft.Page):
         radius=22,
     )
 
-    avatar_wrap = ft.Wrap(
+    avatar_wrap = ft.Row(
+        wrap=True,
         spacing=10,
-        run_spacing=10,
     )
 
     avatar_dialog = ft.AlertDialog(
