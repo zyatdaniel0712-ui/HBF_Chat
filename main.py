@@ -1,169 +1,428 @@
 import flet as ft
 import os
 import random
-import threading
+import asyncio
 from supabase import create_client
 
-# --- 1. НАСТРОЙКИ ОБЛАКА (ВСТАВЬ СВОИ) ---
-URL = "https://nesxjcdhqgstahwfnrba.supabase.co" 
-KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"             
+# =========================
+# SUPABASE
+# =========================
+URL = "https://nesxjcdhqgstahwfnrba.supabase.co"
+KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"
+
 supabase = create_client(URL, KEY)
 
+# =========================
+# ЛОКАЛЬНЫЕ АВАТАРКИ
+# =========================
+# Положи картинки в папку:
+#
+# assets/avatars/
+#
+# Например:
+# assets/avatars/avatar1.png
+# assets/avatars/avatar2.png
+# assets/avatars/avatar3.png
+#
+# =========================
+
+AVATARS = [
+    "avatars/avatar1.png",
+    "avatars/avatar2.png",
+    "avatars/avatar3.png",
+    "avatars/avatar4.png",
+]
+
+
 def main(page: ft.Page):
-    # Инициализация ника и аватарки в памяти страницы
-    if not hasattr(page, "my_user_nick"):
-        page.my_user_nick = f"USER_{random.randint(1000, 9999)}"
-    if not hasattr(page, "my_avatar_url"):
-        page.my_avatar_url = f"https://dicebear.com{page.my_user_nick}"
-    
-    page.last_msg_id = 0
-    page.title = "C:\\SYSTEM\\HBF-FLUD\\CHAT.EXE"
+
+    # =========================
+    # НАСТРОЙКИ ОКНА
+    # =========================
+
+    page.title = "TERMINAL CHAT"
+    page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = "black"
-    page.theme = ft.Theme(font_family="Courier New")
+    page.padding = 10
+    page.scroll = "auto"
 
-    # Основной список сообщений
-    chat_display = ft.ListView(expand=True, spacing=10, padding=10)
-    msg_input = ft.TextField(label="COMMAND", expand=True, border_color="#00FF00", color="#00FF00")
+    # =========================
+    # СОСТОЯНИЕ
+    # =========================
 
-    # --- ФУНКЦИЯ ОТРИСОВКИ СООБЩЕНИЯ ---
-    def render_msg(user, text, avatar_url=None, is_history=False):
+    if not hasattr(page, "my_user_nick"):
+        page.my_user_nick = f"USER_{random.randint(1000,9999)}"
+
+    if not hasattr(page, "my_avatar"):
+        page.my_avatar = random.choice(AVATARS)
+
+    page.last_msg_id = 0
+
+    # =========================
+    # UI
+    # =========================
+
+    chat_display = ft.ListView(
+        expand=True,
+        spacing=10,
+        auto_scroll=True
+    )
+
+    msg_input = ft.TextField(
+        hint_text="Введите сообщение...",
+        expand=True,
+        color="#00FF00",
+        border_color="#00FF00",
+        bgcolor="#111111"
+    )
+
+    # =========================
+    # РЕНДЕР СООБЩЕНИЯ
+    # =========================
+
+    def render_msg(user, text, avatar_path, is_history=False):
+
         user_lower = user.lower()
-        
-        # 1. ЛОГИКА ДЛЯ СЕРВЕРА (БЕЗ ФОНА)
-        if user_lower == "сервер" or user_lower == "server":
+
+        if user_lower in ["server", "сервер"]:
             chat_display.controls.append(
-                ft.Row([
-                    ft.Text(f"[SYSTEM]:> {text.upper()}", color="yellow", font_family="Courier New", weight="bold")
-                ], alignment="start")
+                ft.Text(
+                    f"[SYSTEM]: {text}",
+                    color="yellow",
+                    size=14,
+                    weight="bold"
+                )
             )
+
             page.update()
             return
 
-        # 2. ЛОГИКА ЦВЕТОВ ДЛЯ ОБЫЧНЫХ НИКОВ
+        # Цвета ников
         if user_lower == "кевин":
             name_color = "cyan"
+
         elif user_lower in ["хан", "солвер"]:
             name_color = "red"
+
         else:
-            name_color = "#00FF00" if not is_history else "#008800"
+            name_color = "#00FF00"
 
-        img_src = avatar_url if avatar_url else f"https://dicebear.com{user}"
+        bubble = ft.Container(
+            bgcolor="#1c1c1c",
+            border_radius=15,
+            padding=10,
 
-        # 3. ОБЫЧНЫЙ БАБЛ (С СЕРЫМ ФОНОМ ПО ДЛИНЕ ТЕКСТА)
-        chat_display.controls.append(
-            ft.Row([
-                ft.Container(
-                    content=ft.Row([
-                        ft.Image(src=img_src, width=30, height=30, border_radius=15),
-                        ft.Text(f"[{user}]:> {text}", color=name_color, font_family="Courier New")
-                    ], tight=True, vertical_alignment="center", spacing=10),
-                    bgcolor="#1c1c1c",
-                    padding=10,
-                    border_radius=15,
+            content=ft.Row(
+                vertical_alignment=ft.CrossAxisAlignment.START,
+
+                controls=[
+
+                    ft.Image(
+                        src=avatar_path,
+                        width=45,
+                        height=45,
+                        border_radius=999
+                    ),
+
+                    ft.Column(
+                        spacing=5,
+
+                        controls=[
+
+                            ft.Text(
+                                user,
+                                color=name_color,
+                                weight="bold",
+                                size=14
+                            ),
+
+                            ft.Text(
+                                text,
+                                color="white",
+                                selectable=True
+                            )
+                        ]
+                    )
+                ]
+            )
+        )
+
+        chat_display.controls.append(bubble)
+
+        page.update()
+
+    # =========================
+    # ОБНОВЛЕНИЕ ЧАТА
+    # =========================
+
+    async def check_updates():
+
+        while True:
+
+            try:
+
+                res = (
+                    supabase
+                    .table("messages")
+                    .select("*")
+                    .gt("id", page.last_msg_id)
+                    .order("id")
+                    .execute()
                 )
-            ], alignment="start")
-        )
-        page.update()
 
-    # --- ОБНОВЛЕНИЕ ЧАТА (Polling) ---
-    def check_updates():
-        try:
-            res = supabase.table("messages").select("*").gt("id", page.last_msg_id).order("id").execute()
-            for msg in res.data:
-                if msg["user_name"] != page.my_user_nick:
-                    render_msg(msg["user_name"], msg["text"], msg.get("avatar_url"))
-                page.last_msg_id = msg["id"]
-            page.update()
-        except: pass
-        threading.Timer(3, check_updates).start()
-
-    # --- ОТПРАВКА ---
-    def send_msg(e):
-        if msg_input.value:
-            text = msg_input.value
-            msg_input.value = ""
-            try:
-                res = supabase.table("messages").insert({
-                    "user_name": page.my_user_nick, 
-                    "text": text,
-                    "avatar_url": page.my_avatar_url 
-                }).execute()
-                
-                # Обновляем ID последнего сообщения
-                data = res.data
-                if isinstance(data, list) and len(data) > 0:
-                    page.last_msg_id = data[0]["id"]
-                elif isinstance(data, dict):
-                    page.last_msg_id = data["id"]
-                
-                render_msg(page.my_user_nick, text, page.my_avatar_url)
-            except: pass
-            page.update()
-
-    # --- ИНТЕРФЕЙС НАСТРОЕК ---
-    def show_settings(e):
-        page.controls.clear()
-        name_edit = ft.TextField(label="NEW ID", value=page.my_user_nick, border_color="#00FF00", color="#00FF00")
-        avatar_edit = ft.TextField(label="AVATAR URL", value=page.my_avatar_url, border_color="#00FF00", color="#00FF00")
-        
-        def save_name(e):
-            page.my_user_nick = name_edit.value
-            page.update()
-
-        def save_avatar(e):
-            page.my_avatar_url = avatar_edit.value
-            page.update()
-
-        page.add(
-            ft.Text("--- SETTINGS ---", color="#00FF00", size=18, weight="bold"),
-            name_edit, ft.ElevatedButton("SAVE NAME", on_click=save_name),
-            ft.Divider(color="#004400"),
-            avatar_edit, ft.ElevatedButton("SAVE AVATAR URL", on_click=save_avatar),
-            ft.ElevatedButton("RETURN TO CHAT", on_click=lambda _: show_chat_ui())
-        )
-        page.update()
-
-    # --- ИНТЕРФЕЙС ЧАТА ---
-    def show_chat_ui():
-        page.controls.clear()
-        header = ft.Column([
-            ft.Text("--- TERMINAL CHAT SYSTEM v1.0 ONLINE ---", color="#00FF00", size=18, weight="bold"),
-            ft.Row([
-                ft.Text(f"ID: {page.my_user_nick}", color="#008800", size=12),
-                ft.IconButton(ft.Icons.SETTINGS, on_click=show_settings, icon_color="#00FF00")
-            ], alignment="spaceBetween"),
-            ft.Divider(color="#004400"),
-        ])
-
-        # Черный фон для области чата
-        chat_container = ft.Container(content=chat_display, expand=True, bgcolor="black")
-
-        page.add(
-            header, 
-            chat_container,
-            ft.Row([
-                ft.Text(">", color="#00FF00", size=20),
-                msg_input, 
-                ft.IconButton(ft.Icons.SEND, on_click=send_msg, icon_color="#00FF00")
-            ])
-        )
-        
-        # Подгрузка последних сообщений при входе
-        if page.last_msg_id == 0:
-            try:
-                res = supabase.table("messages").select("*").order("created_at").limit(10).execute()
                 for msg in res.data:
-                    render_msg(msg["user_name"], msg["text"], msg.get("avatar_url"), is_history=True)
+
+                    if msg["user_name"] != page.my_user_nick:
+
+                        render_msg(
+                            msg["user_name"],
+                            msg["text"],
+                            msg.get("avatar", "avatars/avatar1.png")
+                        )
+
                     page.last_msg_id = msg["id"]
-            except: pass
+
+                page.update()
+
+            except Exception as ex:
+                print(ex)
+
+            await asyncio.sleep(2)
+
+    # =========================
+    # ОТПРАВКА
+    # =========================
+
+    def send_msg(e):
+
+        if not msg_input.value:
+            return
+
+        text = msg_input.value
+
+        msg_input.value = ""
+
+        try:
+
+            res = (
+                supabase
+                .table("messages")
+                .insert({
+
+                    "user_name": page.my_user_nick,
+                    "text": text,
+                    "avatar": page.my_avatar
+
+                })
+                .execute()
+            )
+
+            data = res.data[0]
+
+            page.last_msg_id = data["id"]
+
+            render_msg(
+                page.my_user_nick,
+                text,
+                page.my_avatar
+            )
+
+        except Exception as ex:
+            print(ex)
+
         page.update()
 
-    show_chat_ui()
-    
-    # Запуск фонового процесса
-    if not hasattr(page, "started"):
-        check_updates()
-        page.started = True
+    # =========================
+    # ВЫБОР АВАТАРКИ
+    # =========================
+
+    def open_avatar_selector(e):
+
+        avatars_grid = ft.GridView(
+            expand=True,
+            max_extent=120,
+            spacing=10,
+            run_spacing=10
+        )
+
+        for avatar in AVATARS:
+
+            def select_avatar(ev, selected=avatar):
+
+                page.my_avatar = selected
+
+                dialog.open = False
+
+                page.snack_bar = ft.SnackBar(
+                    ft.Text("Аватар изменён")
+                )
+
+                page.snack_bar.open = True
+
+                page.update()
+
+            avatars_grid.controls.append(
+
+                ft.Container(
+
+                    content=ft.Image(
+                        src=avatar,
+                        fit=ft.ImageFit.COVER
+                    ),
+
+                    border_radius=20,
+                    ink=True,
+                    on_click=select_avatar
+                )
+            )
+
+        dialog.content = avatars_grid
+
+        dialog.open = True
+
+        page.update()
+
+    # =========================
+    # DIALOG
+    # =========================
+
+    dialog = ft.AlertDialog()
+
+    page.dialog = dialog
+
+    # =========================
+    # HEADER
+    # =========================
+
+    header = ft.Container(
+
+        padding=10,
+        border_radius=15,
+        bgcolor="#111111",
+
+        content=ft.Row(
+
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+
+            controls=[
+
+                ft.Column(
+                    spacing=2,
+
+                    controls=[
+
+                        ft.Text(
+                            "TERMINAL CHAT",
+                            size=20,
+                            weight="bold",
+                            color="#00FF00"
+                        ),
+
+                        ft.Text(
+                            f"ID: {page.my_user_nick}",
+                            color="#008800",
+                            size=12
+                        )
+                    ]
+                ),
+
+                ft.Row(
+
+                    controls=[
+
+                        ft.CircleAvatar(
+                            foreground_image_src=page.my_avatar,
+                            radius=22
+                        ),
+
+                        ft.IconButton(
+                            icon=ft.Icons.PERSON,
+                            icon_color="#00FF00",
+                            on_click=open_avatar_selector
+                        )
+                    ]
+                )
+            ]
+        )
+    )
+
+    # =========================
+    # INPUT BAR
+    # =========================
+
+    input_bar = ft.Container(
+
+        padding=10,
+        border_radius=15,
+        bgcolor="#111111",
+
+        content=ft.Row(
+
+            controls=[
+
+                msg_input,
+
+                ft.IconButton(
+                    icon=ft.Icons.SEND,
+                    icon_color="#00FF00",
+                    on_click=send_msg
+                )
+            ]
+        )
+    )
+
+    # =========================
+    # LOAD HISTORY
+    # =========================
+
+    try:
+
+        res = (
+            supabase
+            .table("messages")
+            .select("*")
+            .order("id")
+            .limit(30)
+            .execute()
+        )
+
+        for msg in res.data:
+
+            render_msg(
+                msg["user_name"],
+                msg["text"],
+                msg.get("avatar", "avatars/avatar1.png"),
+                is_history=True
+            )
+
+            page.last_msg_id = msg["id"]
+
+    except Exception as ex:
+        print(ex)
+
+    # =========================
+    # MAIN UI
+    # =========================
+
+    page.add(
+        header,
+        ft.Container(
+            content=chat_display,
+            expand=True
+        ),
+        input_bar
+    )
+
+    # =========================
+    # START BACKGROUND TASK
+    # =========================
+
+    page.run_task(check_updates)
+
+
+# =========================
+# START
+# =========================
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
