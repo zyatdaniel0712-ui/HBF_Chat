@@ -1,7 +1,6 @@
 import flet as ft
 import random
 import asyncio
-import os
 from supabase import create_client
 
 # =========================================
@@ -36,7 +35,7 @@ def main(page: ft.Page):
     # =========================================
 
     page.title = "TERMINAL CHAT"
-    page.theme_mode = ft.ThemeMode.DARK
+    page.theme_mode = "dark"
     page.bgcolor = "#0b0f14"
     page.padding = 10
 
@@ -71,7 +70,7 @@ def main(page: ft.Page):
     )
 
     # =========================================
-    # АВАТАР
+    # PREVIEW AVATAR
     # =========================================
 
     avatar_preview = ft.CircleAvatar(
@@ -79,25 +78,21 @@ def main(page: ft.Page):
         radius=22,
     )
 
-    avatar_wrap = ft.Row(
-        wrap=True,
-        spacing=10,
-    )
+    # =========================================
+    # DIALOG
+    # =========================================
 
     avatar_dialog = ft.AlertDialog(
         modal=True,
         title=ft.Text("Выбор аватара"),
-        content=ft.Container(
-            width=350,
-            height=350,
-            content=avatar_wrap,
+        content=ft.Column(
+            scroll="auto",
+            height=300,
         ),
     )
 
-    page.dialog = avatar_dialog
-
     # =========================================
-    # РЕНДЕР СООБЩЕНИЙ
+    # RENDER MESSAGE
     # =========================================
 
     def render_msg(user, text, avatar):
@@ -105,7 +100,7 @@ def main(page: ft.Page):
         user_lower = user.lower()
 
         # =========================================
-        # SYSTEM
+        # SYSTEM MESSAGE
         # =========================================
 
         if user_lower in ["server", "сервер"]:
@@ -142,7 +137,7 @@ def main(page: ft.Page):
             color = "#00FF00"
 
         # =========================================
-        # MESSAGE
+        # MESSAGE BUBBLE
         # =========================================
 
         bubble = ft.Container(
@@ -153,7 +148,7 @@ def main(page: ft.Page):
 
             content=ft.Row(
 
-                vertical_alignment=ft.CrossAxisAlignment.START,
+                vertical_alignment="start",
 
                 controls=[
 
@@ -233,12 +228,12 @@ def main(page: ft.Page):
     msg_input.on_submit = send_msg
 
     # =========================================
-    # AVATAR PICKER
+    # OPEN AVATAR PICKER
     # =========================================
 
     def open_avatar_picker(e):
 
-        avatar_wrap.controls.clear()
+        avatar_dialog.content.controls.clear()
 
         for avatar in AVATARS:
 
@@ -252,29 +247,15 @@ def main(page: ft.Page):
 
                 page.update()
 
-            avatar_wrap.controls.append(
+            avatar_dialog.content.controls.append(
 
-                ft.GestureDetector(
-
-                    on_tap=select,
-
-                    content=ft.Container(
-
-                        width=80,
-                        height=80,
-
-                        border_radius=20,
-                        bgcolor="#111111",
-
-                        alignment="center",
-
-                        content=ft.CircleAvatar(
-                            foreground_image_src=avatar,
-                            radius=28,
-                        )
-                    )
+                ft.ElevatedButton(
+                    text=f"Аватар {avatar.split('=')[-1]}",
+                    on_click=select
                 )
             )
+
+        page.dialog = avatar_dialog
 
         avatar_dialog.open = True
 
@@ -292,7 +273,7 @@ def main(page: ft.Page):
 
         content=ft.Row(
 
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            alignment="spaceBetween",
 
             controls=[
 
@@ -324,7 +305,7 @@ def main(page: ft.Page):
                         avatar_preview,
 
                         ft.IconButton(
-                            icon=ft.Icons.PERSON,
+                            icon=ft.icons.PERSON,
                             icon_color="#00FF00",
                             on_click=open_avatar_picker,
                         )
@@ -351,7 +332,7 @@ def main(page: ft.Page):
                 msg_input,
 
                 ft.IconButton(
-                    icon=ft.Icons.SEND,
+                    icon=ft.icons.SEND,
                     icon_color="#00FF00",
                     on_click=send_msg,
                 )
@@ -360,7 +341,7 @@ def main(page: ft.Page):
     )
 
     # =========================================
-    # HISTORY
+    # LOAD HISTORY
     # =========================================
 
     try:
