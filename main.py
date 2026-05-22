@@ -1,3 +1,4 @@
+
 import flet as ft
 import random
 import asyncio
@@ -30,6 +31,10 @@ AVATARS = [
 # =====================================
 
 def main(page: ft.Page):
+
+    # =====================================
+    # PAGE
+    # =====================================
 
     page.title = "TERMINAL CHAT"
     page.theme_mode = "dark"
@@ -64,6 +69,18 @@ def main(page: ft.Page):
     )
 
     # =====================================
+    # CHANGE NICK
+    # =====================================
+
+    nick_input = ft.TextField(
+        hint_text="Новый ник...",
+        width=150,
+        color="#00FF00",
+        border_color="#00FF00",
+        bgcolor="#111111",
+    )
+
+    # =====================================
     # AVATAR PREVIEW
     # =====================================
 
@@ -80,6 +97,34 @@ def main(page: ft.Page):
         visible=False,
         spacing=5,
     )
+
+    # =====================================
+    # USER TEXT
+    # =====================================
+
+    user_text = ft.Text(
+        page.my_user_nick,
+        color="#008800",
+    )
+
+    # =====================================
+    # CHANGE NICK FUNCTION
+    # =====================================
+
+    def change_nick(e):
+
+        new_nick = nick_input.value.strip()
+
+        if new_nick == "":
+            return
+
+        page.my_user_nick = new_nick
+
+        user_text.value = new_nick
+
+        nick_input.value = ""
+
+        page.update()
 
     # =====================================
     # RENDER MESSAGE
@@ -172,7 +217,7 @@ def main(page: ft.Page):
         )
 
     # =====================================
-    # AVATAR SELECT
+    # SELECT AVATAR
     # =====================================
 
     def choose_avatar(e):
@@ -245,10 +290,7 @@ def main(page: ft.Page):
                                     color="#00FF00",
                                 ),
 
-                                ft.Text(
-                                    page.my_user_nick,
-                                    color="#008800",
-                                )
+                                user_text
                             ]
                         ),
 
@@ -268,7 +310,20 @@ def main(page: ft.Page):
                     ]
                 ),
 
-                avatar_menu
+                avatar_menu,
+
+                ft.Row(
+
+                    controls=[
+
+                        nick_input,
+
+                        ft.ElevatedButton(
+                            "Сменить ник",
+                            on_click=change_nick
+                        )
+                    ]
+                )
             ]
         )
     )
