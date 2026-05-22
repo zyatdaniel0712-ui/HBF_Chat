@@ -152,12 +152,12 @@ def main(page: ft.Page):
     # =====================================
 
     def open_avatar_menu(e):
+        
+        avatar_menu.controls.clear()
 
-    avatar_menu.controls.clear()
+        for avatar in AVATARS:
 
-    for avatar in AVATARS:
-
-        def select(ev, selected=avatar):
+            def select(ev, selected=avatar):
 
             page.my_avatar = selected
 
