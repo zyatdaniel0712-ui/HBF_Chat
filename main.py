@@ -1,21 +1,20 @@
 import flet as ft
 import random
-import os
 import asyncio
 from supabase import create_client
 
-# =========================================
+# =====================================
 # SUPABASE
-# =========================================
+# =====================================
 
 URL = "https://nesxjcdhqgstahwfnrba.supabase.co"
 KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"
 
 supabase = create_client(URL, KEY)
 
-# =========================================
-# АВАТАРКИ
-# =========================================
+# =====================================
+# AVATARS
+# =====================================
 
 AVATARS = [
     "https://api.dicebear.com/7.x/bottts/png?seed=1",
@@ -25,36 +24,29 @@ AVATARS = [
     "https://api.dicebear.com/7.x/bottts/png?seed=5",
 ]
 
-# =========================================
+# =====================================
 # MAIN
-# =========================================
+# =====================================
 
 def main(page: ft.Page):
-
-    # =========================================
-    # PAGE
-    # =========================================
 
     page.title = "TERMINAL CHAT"
     page.theme_mode = "dark"
     page.bgcolor = "#0b0f14"
     page.padding = 10
 
-    # =========================================
+    # =====================================
     # USER
-    # =========================================
+    # =====================================
 
-    if not hasattr(page, "my_user_nick"):
-        page.my_user_nick = f"USER_{random.randint(1000,9999)}"
-
-    if not hasattr(page, "my_avatar"):
-        page.my_avatar = random.choice(AVATARS)
+    page.my_user_nick = f"USER_{random.randint(1000,9999)}"
+    page.my_avatar = random.choice(AVATARS)
 
     page.last_msg_id = 0
 
-    # =========================================
+    # =====================================
     # CHAT
-    # =========================================
+    # =====================================
 
     chat_display = ft.ListView(
         expand=True,
@@ -70,76 +62,29 @@ def main(page: ft.Page):
         bgcolor="#111111",
     )
 
-    # =========================================
-    # PREVIEW AVATAR
-    # =========================================
+    # =====================================
+    # AVATAR PREVIEW
+    # =====================================
 
     avatar_preview = ft.CircleAvatar(
         foreground_image_src=page.my_avatar,
-        radius=22,
+        radius=20,
     )
 
-    # =========================================
-    # DIALOG
-    # =========================================
+    # =====================================
+    # AVATAR MENU
+    # =====================================
 
-    avatar_dialog = ft.AlertDialog(
-        modal=True,
-        title=ft.Text("Выбор аватара"),
-        content=ft.Column(
-            scroll="auto",
-            height=300,
-        ),
+    avatar_menu = ft.Column(
+        visible=False,
+        spacing=5,
     )
 
-    # =========================================
+    # =====================================
     # RENDER MESSAGE
-    # =========================================
+    # =====================================
 
     def render_msg(user, text, avatar):
-
-        user_lower = user.lower()
-
-        # =========================================
-        # SYSTEM MESSAGE
-        # =========================================
-
-        if user_lower in ["server", "сервер"]:
-
-            chat_display.controls.append(
-
-                ft.Container(
-                    bgcolor="#151515",
-                    border_radius=15,
-                    padding=10,
-
-                    content=ft.Text(
-                        f"[SYSTEM]: {text}",
-                        color="yellow",
-                        weight="bold",
-                    )
-                )
-            )
-
-            page.update()
-            return
-
-        # =========================================
-        # COLORS
-        # =========================================
-
-        if user_lower == "кевин":
-            color = "cyan"
-
-        elif user_lower in ["хан", "солвер"]:
-            color = "red"
-
-        else:
-            color = "#00FF00"
-
-        # =========================================
-        # MESSAGE BUBBLE
-        # =========================================
 
         bubble = ft.Container(
 
@@ -155,7 +100,7 @@ def main(page: ft.Page):
 
                     ft.CircleAvatar(
                         foreground_image_src=avatar,
-                        radius=20,
+                        radius=18,
                     ),
 
                     ft.Column(
@@ -166,15 +111,14 @@ def main(page: ft.Page):
                         controls=[
 
                             ft.Text(
-                                f"[{user}]",
-                                color=color,
+                                user,
+                                color="#00FF00",
                                 weight="bold",
                             ),
 
                             ft.Text(
                                 text,
                                 color="white",
-                                selectable=True,
                             )
                         ]
                     )
@@ -186,15 +130,15 @@ def main(page: ft.Page):
 
         page.update()
 
-    # =========================================
+    # =====================================
     # SEND MESSAGE
-    # =========================================
+    # =====================================
 
     def send_msg(e):
 
         text = msg_input.value.strip()
 
-        if not text:
+        if text == "":
             return
 
         msg_input.value = ""
@@ -226,104 +170,116 @@ def main(page: ft.Page):
             page.my_avatar
         )
 
-    msg_input.on_submit = send_msg
+    # =====================================
+    # AVATAR SELECT
+    # =====================================
 
-    # =========================================
-    # OPEN AVATAR PICKER
-    # =========================================
+    def choose_avatar(e):
 
-    def open_avatar_picker(e):
+        selected = e.control.data
 
-        avatar_dialog.content.controls.clear()
+        page.my_avatar = selected
 
-        for avatar in AVATARS:
+        avatar_preview.foreground_image_src = selected
 
-            def select(ev, selected=avatar):
-
-                page.my_avatar = selected
-
-                avatar_preview.foreground_image_src = selected
-
-                avatar_dialog.open = False
-
-                page.update()
-
-            avatar_dialog.content.controls.append(
-
-                ft.ElevatedButton(
-                    f"Аватар {avatar.split('=')[-1]}",
-                    on_click=select
-                )
-            )
-
-        page.dialog = avatar_dialog
-
-        avatar_dialog.open = True
+        avatar_menu.visible = False
 
         page.update()
 
-    # =========================================
+    # =====================================
+    # OPEN MENU
+    # =====================================
+
+    def open_avatar_menu(e):
+
+        avatar_menu.controls.clear()
+
+        for avatar in AVATARS:
+
+            avatar_menu.controls.append(
+
+                ft.ElevatedButton(
+                    f"Avatar {avatar.split('=')[-1]}",
+                    data=avatar,
+                    on_click=choose_avatar
+                )
+            )
+
+        avatar_menu.visible = not avatar_menu.visible
+
+        page.update()
+
+    # =====================================
     # HEADER
-    # =========================================
+    # =====================================
 
     header = ft.Container(
 
-        padding=12,
-        border_radius=16,
+        padding=10,
+        border_radius=15,
         bgcolor="#111111",
 
-        content=ft.Row(
+        content=ft.Column(
 
-            alignment="spaceBetween",
+            spacing=10,
 
             controls=[
 
-                ft.Column(
+                ft.Row(
 
-                    spacing=2,
+                    alignment="spaceBetween",
 
                     controls=[
 
-                        ft.Text(
-                            "TERMINAL CHAT",
-                            size=20,
-                            weight="bold",
-                            color="#00FF00",
+                        ft.Column(
+
+                            spacing=2,
+
+                            controls=[
+
+                                ft.Text(
+                                    "TERMINAL CHAT",
+                                    size=20,
+                                    weight="bold",
+                                    color="#00FF00",
+                                ),
+
+                                ft.Text(
+                                    page.my_user_nick,
+                                    color="#008800",
+                                )
+                            ]
                         ),
 
-                        ft.Text(
-                            f"ID: {page.my_user_nick}",
-                            color="#008800",
-                            size=12,
+                        ft.Row(
+
+                            controls=[
+
+                                avatar_preview,
+
+                                ft.IconButton(
+                                    icon=ft.Icons.PERSON,
+                                    icon_color="#00FF00",
+                                    on_click=open_avatar_menu,
+                                )
+                            ]
                         )
                     ]
                 ),
 
-                ft.Row(
-
-                    controls=[
-
-                        avatar_preview,
-
-                        ft.IconButton(
-                            icon=ft.Icons.SEND,
-                            icon_color="#00FF00",
-                            on_click=open_avatar_picker,
-                        )
-                    ]
-                )
+                avatar_menu
             ]
         )
     )
 
-    # =========================================
+    # =====================================
     # INPUT BAR
-    # =========================================
+    # =====================================
 
     input_bar = ft.Container(
 
         padding=10,
-        border_radius=16,
+        border_radius=15,
         bgcolor="#111111",
 
         content=ft.Row(
@@ -341,9 +297,9 @@ def main(page: ft.Page):
         )
     )
 
-    # =========================================
+    # =====================================
     # LOAD HISTORY
-    # =========================================
+    # =====================================
 
     try:
 
@@ -369,9 +325,9 @@ def main(page: ft.Page):
     except Exception as ex:
         print(ex)
 
-    # =========================================
+    # =====================================
     # UPDATE LOOP
-    # =========================================
+    # =====================================
 
     async def check_updates():
 
@@ -407,9 +363,9 @@ def main(page: ft.Page):
 
             await asyncio.sleep(2)
 
-    # =========================================
+    # =====================================
     # UI
-    # =========================================
+    # =====================================
 
     page.add(
         header,
@@ -420,15 +376,15 @@ def main(page: ft.Page):
         input_bar
     )
 
-    # =========================================
-    # START LOOP
-    # =========================================
+    # =====================================
+    # START
+    # =====================================
 
     page.run_task(check_updates)
 
-# =========================================
-# START
-# =========================================
+# =====================================
+# APP
+# =====================================
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
