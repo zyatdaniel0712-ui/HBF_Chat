@@ -1,4 +1,3 @@
-
 import flet as ft
 import random
 import asyncio
@@ -71,8 +70,6 @@ def main(page: ft.Page):
     # =====================================
     # SETTINGS
     # =====================================
-
-    settings_visible = False
 
     avatar_preview = ft.CircleAvatar(
         foreground_image_src=page.my_avatar,
@@ -177,40 +174,6 @@ def main(page: ft.Page):
     # TOGGLE SETTINGS
     # =====================================
 
-    settings_panel = ft.Container(
-        visible=False,
-        bgcolor="#111111",
-        border_radius=15,
-        padding=20,
-
-        content=ft.Column(
-
-            horizontal_alignment="center",
-            spacing=20,
-
-            controls=[
-
-                settings_big_avatar,
-
-                settings_nick,
-
-                ft.ElevatedButton(
-                    "Сменить аватар",
-                    on_click=open_avatar_menu
-                ),
-
-                avatar_menu,
-
-                nick_input,
-
-                ft.ElevatedButton(
-                    "Сохранить ник",
-                    on_click=change_nick
-                )
-            ]
-        )
-    )
-
     def toggle_settings(e):
 
         settings_panel.visible = not settings_panel.visible
@@ -218,29 +181,57 @@ def main(page: ft.Page):
         page.update()
 
     # =====================================
-    # NAME COLOR
-    # =====================================
-
-    def get_name_color(user):
-
-        user_lower = user.lower()
-
-        if user_lower == "кевин":
-            return "cyan"
-
-        elif user_lower in ["хан", "солвер"]:
-            return "red"
-
-        elif user == page.my_user_nick:
-            return "#00FF00"
-
-        return "white"
-
-    # =====================================
     # RENDER MESSAGE
     # =====================================
 
     def render_msg(user, text, avatar):
+
+        user_lower = user.lower()
+
+        # =====================================
+        # SERVER MESSAGE
+        # =====================================
+
+        if user_lower in ["server", "сервер"]:
+
+            chat_display.controls.append(
+
+                ft.Row(
+
+                    controls=[
+
+                        ft.Text(
+                            f"[SYSTEM] {text}",
+                            color="yellow",
+                            weight="bold",
+                            size=16,
+                        )
+                    ]
+                )
+            )
+
+            page.update()
+            return
+
+        # =====================================
+        # NAME COLORS
+        # =====================================
+
+        if user_lower == "кевин":
+            name_color = "cyan"
+
+        elif user_lower in ["хан", "солвер"]:
+            name_color = "red"
+
+        elif user == page.my_user_nick:
+            name_color = "#00FF00"
+
+        else:
+            name_color = "white"
+
+        # =====================================
+        # NORMAL MESSAGE
+        # =====================================
 
         bubble = ft.Container(
 
@@ -268,7 +259,7 @@ def main(page: ft.Page):
 
                             ft.Text(
                                 user,
-                                color=get_name_color(user),
+                                color=name_color,
                                 weight="bold",
                             ),
 
@@ -325,6 +316,44 @@ def main(page: ft.Page):
             text,
             page.my_avatar
         )
+
+    # =====================================
+    # SETTINGS PANEL
+    # =====================================
+
+    settings_panel = ft.Container(
+        visible=False,
+        bgcolor="transparent",
+        border_radius=15,
+        padding=20,
+
+        content=ft.Column(
+
+            horizontal_alignment="center",
+            spacing=20,
+
+            controls=[
+
+                settings_big_avatar,
+
+                settings_nick,
+
+                ft.ElevatedButton(
+                    "Сменить аватар",
+                    on_click=open_avatar_menu
+                ),
+
+                avatar_menu,
+
+                nick_input,
+
+                ft.ElevatedButton(
+                    "Сохранить ник",
+                    on_click=change_nick
+                )
+            ]
+        )
+    )
 
     # =====================================
     # HEADER
