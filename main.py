@@ -82,7 +82,7 @@ def main(page: ft.Page):
     )
 
     # =====================================
-    # SETTINGS TEXT
+    # TEXT
     # =====================================
 
     settings_nick = ft.Text(
@@ -99,7 +99,7 @@ def main(page: ft.Page):
     )
 
     # =====================================
-    # INPUTS
+    # INPUT
     # =====================================
 
     nick_input = ft.TextField(
@@ -211,7 +211,7 @@ def main(page: ft.Page):
         page.update()
 
     # =====================================
-    # MESSAGE COLORS
+    # NAME COLORS
     # =====================================
 
     def get_name_color(user):
@@ -355,33 +355,40 @@ def main(page: ft.Page):
 
         visible=False,
         alignment="center",
-        padding=20,
 
-        content=ft.Column(
+        content=ft.Container(
 
-            horizontal_alignment="center",
-            spacing=20,
+            width=350,
+            padding=25,
+            border_radius=20,
+            bgcolor="#111111",
 
-            controls=[
+            content=ft.Column(
 
-                settings_big_avatar,
+                horizontal_alignment="center",
+                spacing=20,
 
-                settings_nick,
+                controls=[
 
-                ft.ElevatedButton(
-                    "Сменить аватар",
-                    on_click=open_avatar_menu
-                ),
+                    settings_big_avatar,
 
-                avatar_menu,
+                    settings_nick,
 
-                nick_input,
+                    ft.ElevatedButton(
+                        "Сменить аватар",
+                        on_click=open_avatar_menu
+                    ),
 
-                ft.ElevatedButton(
-                    "Сохранить ник",
-                    on_click=change_nick
-                )
-            ]
+                    avatar_menu,
+
+                    nick_input,
+
+                    ft.ElevatedButton(
+                        "Сохранить ник",
+                        on_click=change_nick
+                    )
+                ]
+            )
         )
     )
 
