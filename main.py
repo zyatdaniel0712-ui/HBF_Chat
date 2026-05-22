@@ -159,14 +159,14 @@ def main(page: ft.Page):
 
             def select(ev, selected=avatar):
 
-            page.my_avatar = selected
+                page.my_avatar = selected
 
-            avatar_preview.foreground_image_src = selected
-            settings_big_avatar.foreground_image_src = selected
+                avatar_preview.foreground_image_src = selected
+                settings_big_avatar.foreground_image_src = selected
 
-            avatar_menu.visible = False
+                avatar_menu.visible = False
 
-            page.update()
+                page.update()
 
         avatar_menu.controls.append(
 
