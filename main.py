@@ -152,55 +152,24 @@ def main(page: ft.Page):
     # =====================================
 
     def open_avatar_menu(e):
-        
+
         avatar_menu.controls.clear()
 
         for avatar in AVATARS:
 
-            def select(ev, selected=avatar):
+            avatar_menu.controls.append(
 
-                page.my_avatar = selected
-
-                avatar_preview.foreground_image_src = selected
-                settings_big_avatar.foreground_image_src = selected
-
-                avatar_menu.visible = False
-
-                page.update()
-
-        avatar_menu.controls.append(
-
-            ft.Container(
-
-                bgcolor="#1c1c1c",
-                border_radius=10,
-                padding=5,
-
-                content=ft.Row(
-
-                    spacing=10,
-
-                    controls=[
-
-                        ft.CircleAvatar(
-                            foreground_image_src=avatar,
-                            radius=16,
-                        ),
-
-                        ft.ElevatedButton(
-                            f"Avatar {avatar.split('=')[-1]}",
-                            data=avatar,
-                            on_click=select
-                        )
-                    ]
+                ft.ElevatedButton(
+                    f"Avatar {avatar.split('=')[-1]}",
+                    data=avatar,
+                    on_click=choose_avatar
                 )
             )
-        )
 
-    avatar_menu.visible = not avatar_menu.visible
+        avatar_menu.visible = not avatar_menu.visible
 
-    page.update()
-    
+        page.update()
+
     # =====================================
     # TOGGLE SETTINGS
     # =====================================
