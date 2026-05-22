@@ -2,7 +2,6 @@
 import flet as ft
 import random
 import asyncio
-import os
 from supabase import create_client
 
 # =====================================
@@ -69,29 +68,34 @@ def main(page: ft.Page):
     )
 
     # =====================================
-    # CHANGE NICK
+    # SETTINGS
     # =====================================
 
-    nick_input = ft.TextField(
-        hint_text="Новый ник...",
-        width=150,
-        color="#00FF00",
-        border_color="#00FF00",
-        bgcolor="#111111",
-    )
-
-    # =====================================
-    # AVATAR PREVIEW
-    # =====================================
+    settings_visible = False
 
     avatar_preview = ft.CircleAvatar(
         foreground_image_src=page.my_avatar,
         radius=20,
     )
 
-    # =====================================
-    # AVATAR MENU
-    # =====================================
+    settings_big_avatar = ft.CircleAvatar(
+        foreground_image_src=page.my_avatar,
+        radius=60,
+    )
+
+    settings_nick = ft.Text(
+        page.my_user_nick,
+        size=24,
+        weight="bold",
+        color="#00FF00",
+    )
+
+    nick_input = ft.TextField(
+        hint_text="Новый ник...",
+        color="#00FF00",
+        border_color="#00FF00",
+        bgcolor="#111111",
+    )
 
     avatar_menu = ft.Column(
         visible=False,
@@ -99,16 +103,17 @@ def main(page: ft.Page):
     )
 
     # =====================================
-    # USER TEXT
+    # USER LABEL
     # =====================================
 
     user_text = ft.Text(
         page.my_user_nick,
-        color="#008800",
+        color="#00FF00",
+        weight="bold",
     )
 
     # =====================================
-    # CHANGE NICK FUNCTION
+    # CHANGE NICK
     # =====================================
 
     def change_nick(e):
@@ -121,10 +126,114 @@ def main(page: ft.Page):
         page.my_user_nick = new_nick
 
         user_text.value = new_nick
+        settings_nick.value = new_nick
 
         nick_input.value = ""
 
         page.update()
+
+    # =====================================
+    # CHOOSE AVATAR
+    # =====================================
+
+    def choose_avatar(e):
+
+        selected = e.control.data
+
+        page.my_avatar = selected
+
+        avatar_preview.foreground_image_src = selected
+        settings_big_avatar.foreground_image_src = selected
+
+        avatar_menu.visible = False
+
+        page.update()
+
+    # =====================================
+    # OPEN AVATAR MENU
+    # =====================================
+
+    def open_avatar_menu(e):
+
+        avatar_menu.controls.clear()
+
+        for avatar in AVATARS:
+
+            avatar_menu.controls.append(
+
+                ft.ElevatedButton(
+                    f"Avatar {avatar.split('=')[-1]}",
+                    data=avatar,
+                    on_click=choose_avatar
+                )
+            )
+
+        avatar_menu.visible = not avatar_menu.visible
+
+        page.update()
+
+    # =====================================
+    # TOGGLE SETTINGS
+    # =====================================
+
+    settings_panel = ft.Container(
+        visible=False,
+        bgcolor="#111111",
+        border_radius=15,
+        padding=20,
+
+        content=ft.Column(
+
+            horizontal_alignment="center",
+            spacing=20,
+
+            controls=[
+
+                settings_big_avatar,
+
+                settings_nick,
+
+                ft.ElevatedButton(
+                    "Сменить аватар",
+                    on_click=open_avatar_menu
+                ),
+
+                avatar_menu,
+
+                nick_input,
+
+                ft.ElevatedButton(
+                    "Сохранить ник",
+                    on_click=change_nick
+                )
+            ]
+        )
+    )
+
+    def toggle_settings(e):
+
+        settings_panel.visible = not settings_panel.visible
+
+        page.update()
+
+    # =====================================
+    # NAME COLOR
+    # =====================================
+
+    def get_name_color(user):
+
+        user_lower = user.lower()
+
+        if user_lower == "кевин":
+            return "cyan"
+
+        elif user_lower in ["хан", "солвер"]:
+            return "red"
+
+        elif user == page.my_user_nick:
+            return "#00FF00"
+
+        return "white"
 
     # =====================================
     # RENDER MESSAGE
@@ -158,7 +267,7 @@ def main(page: ft.Page):
 
                             ft.Text(
                                 user,
-                                color="#00FF00",
+                                color=get_name_color(user),
                                 weight="bold",
                             ),
 
@@ -217,45 +326,6 @@ def main(page: ft.Page):
         )
 
     # =====================================
-    # SELECT AVATAR
-    # =====================================
-
-    def choose_avatar(e):
-
-        selected = e.control.data
-
-        page.my_avatar = selected
-
-        avatar_preview.foreground_image_src = selected
-
-        avatar_menu.visible = False
-
-        page.update()
-
-    # =====================================
-    # OPEN MENU
-    # =====================================
-
-    def open_avatar_menu(e):
-
-        avatar_menu.controls.clear()
-
-        for avatar in AVATARS:
-
-            avatar_menu.controls.append(
-
-                ft.ElevatedButton(
-                    f"Avatar {avatar.split('=')[-1]}",
-                    data=avatar,
-                    on_click=choose_avatar
-                )
-            )
-
-        avatar_menu.visible = not avatar_menu.visible
-
-        page.update()
-
-    # =====================================
     # HEADER
     # =====================================
 
@@ -265,62 +335,39 @@ def main(page: ft.Page):
         border_radius=15,
         bgcolor="#111111",
 
-        content=ft.Column(
+        content=ft.Row(
 
-            spacing=10,
+            alignment="spaceBetween",
 
             controls=[
 
-                ft.Row(
+                ft.Column(
 
-                    alignment="spaceBetween",
+                    spacing=2,
 
                     controls=[
 
-                        ft.Column(
-
-                            spacing=2,
-
-                            controls=[
-
-                                ft.Text(
-                                    "TERMINAL CHAT",
-                                    size=20,
-                                    weight="bold",
-                                    color="#00FF00",
-                                ),
-
-                                user_text
-                            ]
+                        ft.Text(
+                            "TERMINAL CHAT",
+                            size=20,
+                            weight="bold",
+                            color="#00FF00",
                         ),
 
-                        ft.Row(
-
-                            controls=[
-
-                                avatar_preview,
-
-                                ft.IconButton(
-                                    icon=ft.Icons.PERSON,
-                                    icon_color="#00FF00",
-                                    on_click=open_avatar_menu,
-                                )
-                            ]
-                        )
+                        user_text
                     ]
                 ),
 
-                avatar_menu,
-
                 ft.Row(
 
                     controls=[
 
-                        nick_input,
+                        avatar_preview,
 
-                        ft.ElevatedButton(
-                            "Сменить ник",
-                            on_click=change_nick
+                        ft.IconButton(
+                            icon=ft.Icons.SETTINGS,
+                            icon_color="#00FF00",
+                            on_click=toggle_settings,
                         )
                     ]
                 )
@@ -425,6 +472,7 @@ def main(page: ft.Page):
 
     page.add(
         header,
+        settings_panel,
         ft.Container(
             expand=True,
             content=chat_display,
