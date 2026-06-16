@@ -2,6 +2,7 @@ import flet as ft
 import random
 import asyncio
 import os
+import base64
 from supabase import create_client
 
 # =====================================
@@ -37,8 +38,8 @@ def main(page: ft.Page):
 
     page.title = "TERMINAL CHAT"
     page.theme_mode = "dark"
-    page.bgcolor = "#0b0f14"
-    page.padding = 10
+    page.bgcolor = "#0a0a0a"
+    page.padding = ft.padding.all(8)
 
     # =====================================
     # USER
@@ -48,6 +49,8 @@ def main(page: ft.Page):
     page.my_avatar = random.choice(AVATARS)
 
     page.last_msg_id = 0
+    page.reply_to_user = ""
+    page.reply_to_text = ""
 
     # =====================================
     # CHAT
@@ -55,16 +58,55 @@ def main(page: ft.Page):
 
     chat_display = ft.ListView(
         expand=True,
-        spacing=10,
+        spacing=2,
         auto_scroll=True,
+        padding=ft.padding.symmetric(horizontal=4, vertical=4),
     )
 
     msg_input = ft.TextField(
-        hint_text="Введите сообщение...",
+        hint_text="type message and press Enter...",
+        hint_style=ft.TextStyle(color="#334433"),
         expand=True,
         color="#00FF00",
-        border_color="#00FF00",
-        bgcolor="#111111",
+        border_color="transparent",
+        focused_border_color="transparent",
+        bgcolor="transparent",
+        cursor_color="#00FF00",
+        on_submit=lambda e: send_msg(e),
+    )
+
+    reply_bar_label = ft.Text(
+        "",
+        color="#888888",
+        size=12,
+        expand=True,
+        italic=True,
+        no_wrap=True,
+        overflow="ellipsis",
+    )
+
+    reply_bar = ft.Container(
+        visible=False,
+        padding=ft.padding.symmetric(horizontal=12, vertical=4),
+        bgcolor="#060e06",
+        border=ft.border.only(
+            top=ft.BorderSide(1, "#1a2a1a"),
+            left=ft.BorderSide(2, "#00AA00"),
+        ),
+        content=ft.Row(
+            spacing=6,
+            vertical_alignment="center",
+            controls=[
+                ft.Text("↩", color="#00AA00", size=13),
+                reply_bar_label,
+                ft.IconButton(
+                    icon=ft.icons.CLOSE,
+                    icon_color="#336633",
+                    icon_size=14,
+                    on_click=lambda e: cancel_reply(e),
+                ),
+            ]
+        )
     )
 
     # =====================================
@@ -100,14 +142,54 @@ def main(page: ft.Page):
         spacing=5,
     )
 
+    upload_status = ft.Text(
+        "",
+        color="#00FF00",
+        size=12,
+    )
+
+    # =====================================
+    # FILE PICKER
+    # =====================================
+
+    def on_file_picked(e):
+        if not e.files:
+            return
+        file = e.files[0]
+        upload_url = page.get_upload_url(file.name, 60)
+        file_picker.upload([ft.FilePickerUploadFile(file.name, upload_url=upload_url)])
+
+    def on_upload_progress(e):
+        if e.progress == 1.0:
+            file_path = os.path.join("uploads", e.file_name)
+            try:
+                with open(file_path, "rb") as f:
+                    data = f.read()
+                ext = e.file_name.rsplit(".", 1)[-1].lower()
+                mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
+                avatar_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+            except Exception:
+                avatar_url = f"/uploads/{e.file_name}"
+            page.my_avatar = avatar_url
+            avatar_preview.foreground_image_src = avatar_url
+            settings_big_avatar.foreground_image_src = avatar_url
+            upload_status.value = "Аватарка загружена!"
+            page.update()
+        elif e.error:
+            upload_status.value = "Ошибка загрузки"
+            page.update()
+
+    file_picker = ft.FilePicker(on_result=on_file_picked, on_upload=on_upload_progress)
+
     # =====================================
     # USER LABEL
     # =====================================
 
     user_text = ft.Text(
         page.my_user_nick,
-        color="#00FF00",
+        color="#00CC00",
         weight="bold",
+        size=13,
     )
 
     # =====================================
@@ -175,9 +257,30 @@ def main(page: ft.Page):
     # =====================================
 
     def toggle_settings(e):
+        settings_dialog.open = True
+        page.update()
 
-        settings_panel.visible = not settings_panel.visible
+    def close_settings(e):
+        settings_dialog.open = False
+        page.update()
 
+    # =====================================
+    # REPLY HELPERS
+    # =====================================
+
+    def cancel_reply(e):
+        page.reply_to_user = ""
+        page.reply_to_text = ""
+        reply_bar.visible = False
+        page.update()
+
+    def set_reply(reply_user, reply_text):
+        page.reply_to_user = reply_user
+        page.reply_to_text = reply_text[:80]
+        snippet = reply_text[:55] + ("…" if len(reply_text) > 55 else "")
+        reply_bar_label.value = f"{reply_user}: {snippet}"
+        reply_bar.visible = True
+        msg_input.focus()
         page.update()
 
     # =====================================
@@ -195,18 +298,11 @@ def main(page: ft.Page):
         if user_lower in ["server", "сервер"]:
 
             chat_display.controls.append(
-
-                ft.Row(
-
-                    controls=[
-
-                        ft.Text(
-                            f"[SYSTEM] {text}",
-                            color="yellow",
-                            weight="bold",
-                            size=16,
-                        )
-                    ]
+                ft.Text(
+                    f"*** SYSTEM: {text} ***",
+                    color="#FFFF00",
+                    size=13,
+                    weight="bold",
                 )
             )
 
@@ -227,53 +323,106 @@ def main(page: ft.Page):
             name_color = "#00FF00"
 
         else:
-            name_color = "white"
+            name_color = "#aaaaaa"
 
         # =====================================
-        # NORMAL MESSAGE
+        # PARSE REPLY PREFIX
         # =====================================
 
-        bubble = ft.Container(
+        quoted_user = None
+        quoted_text = None
+        display_text = text
 
-            bgcolor="#1c1c1c",
-            border_radius=15,
-            padding=10,
+        if text.startswith("↪REPLY↪"):
+            parts = text.split("↪")
+            # ['', 'REPLY', username, quoted_text, '', '\nactual']
+            if len(parts) >= 5:
+                quoted_user = parts[2]
+                quoted_text = parts[3]
+                newline_idx = text.find("\n")
+                display_text = text[newline_idx + 1:] if newline_idx != -1 else text
 
-            content=ft.Row(
+        # =====================================
+        # TERMINAL-STYLE MESSAGE ROW
+        # =====================================
 
-                vertical_alignment="start",
+        def make_reply_fn(u, t):
+            def fn(e):
+                set_reply(u, t)
+            return fn
 
-                controls=[
-
-                    ft.CircleAvatar(
-                        foreground_image_src=avatar,
-                        radius=18,
-                    ),
-
-                    ft.Column(
-
-                        spacing=5,
-                        expand=True,
-
-                        controls=[
-
-                            ft.Text(
-                                user,
-                                color=name_color,
-                                weight="bold",
-                            ),
-
-                            ft.Text(
-                                text,
-                                color="white",
-                            )
-                        ]
-                    )
-                ]
-            )
+        reply_btn = ft.IconButton(
+            icon=ft.icons.REPLY,
+            icon_color="#1a3a1a",
+            icon_size=14,
+            tooltip="Ответить",
+            on_click=make_reply_fn(user, display_text),
         )
 
-        chat_display.controls.append(bubble)
+        message_row = ft.Row(
+            vertical_alignment="center",
+            spacing=6,
+            controls=[
+                ft.CircleAvatar(
+                    foreground_image_src=avatar,
+                    radius=12,
+                ),
+                ft.Text(
+                    user,
+                    color=name_color,
+                    weight="bold",
+                    size=13,
+                    no_wrap=True,
+                ),
+                ft.Text(
+                    ">",
+                    color="#1a3a1a",
+                    size=13,
+                ),
+                ft.Text(
+                    display_text,
+                    color="#c8c8c8",
+                    size=13,
+                    expand=True,
+                    selectable=True,
+                ),
+                reply_btn,
+            ]
+        )
+
+        col_controls = []
+
+        if quoted_user:
+            col_controls.append(
+                ft.Container(
+                    padding=ft.padding.only(left=32, bottom=1),
+                    content=ft.Row(
+                        spacing=6,
+                        controls=[
+                            ft.Container(
+                                width=2,
+                                height=16,
+                                bgcolor="#336633",
+                                border_radius=1,
+                            ),
+                            ft.Text(
+                                f"↩ {quoted_user}: {quoted_text}",
+                                color="#446644",
+                                size=11,
+                                italic=True,
+                                no_wrap=True,
+                                overflow="ellipsis",
+                            ),
+                        ]
+                    )
+                )
+            )
+
+        col_controls.append(message_row)
+
+        chat_display.controls.append(
+            ft.Column(spacing=0, tight=True, controls=col_controls)
+        )
 
         page.update()
 
@@ -290,6 +439,13 @@ def main(page: ft.Page):
 
         msg_input.value = ""
 
+        full_text = text
+        if page.reply_to_user:
+            full_text = f"↪REPLY↪{page.reply_to_user}↪{page.reply_to_text}↪\n{text}"
+            page.reply_to_user = ""
+            page.reply_to_text = ""
+            reply_bar.visible = False
+
         try:
 
             res = (
@@ -298,7 +454,7 @@ def main(page: ft.Page):
                 .insert({
 
                     "user_name": page.my_user_nick,
-                    "text": text,
+                    "text": full_text,
                     "avatar_url": page.my_avatar
 
                 })
@@ -313,46 +469,58 @@ def main(page: ft.Page):
 
         render_msg(
             page.my_user_nick,
-            text,
+            full_text,
             page.my_avatar
         )
 
     # =====================================
-    # SETTINGS PANEL
+    # SETTINGS DIALOG
     # =====================================
 
-    settings_panel = ft.Container(
-        visible=False,
-        bgcolor="transparent",
-        border_radius=15,
-        padding=20,
-
-        content=ft.Column(
-
-            horizontal_alignment="center",
-            spacing=20,
-
+    settings_dialog = ft.AlertDialog(
+        modal=True,
+        bgcolor="#0d1a0d",
+        title=ft.Row(
+            spacing=12,
             controls=[
-
                 settings_big_avatar,
-
-                settings_nick,
-
+                settings_nick
+            ]
+        ),
+        content=ft.Column(
+            width=300,
+            spacing=12,
+            tight=True,
+            controls=[
                 ft.ElevatedButton(
                     "Сменить аватар",
                     on_click=open_avatar_menu
                 ),
-
                 avatar_menu,
-
+                ft.ElevatedButton(
+                    "Загрузить свою аватарку",
+                    icon=ft.icons.UPLOAD,
+                    on_click=lambda _: file_picker.pick_files(
+                        allow_multiple=False,
+                        allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"],
+                    ),
+                ),
+                upload_status,
                 nick_input,
-
                 ft.ElevatedButton(
                     "Сохранить ник",
                     on_click=change_nick
-                )
+                ),
             ]
-        )
+        ),
+        actions=[
+            ft.TextButton(
+                "[ ЗАКРЫТЬ ]",
+                style=ft.ButtonStyle(color="#00FF00"),
+                on_click=close_settings,
+            ),
+        ],
+        actions_alignment="end",
     )
 
     # =====================================
@@ -361,9 +529,9 @@ def main(page: ft.Page):
 
     header = ft.Container(
 
-        padding=10,
-        border_radius=15,
-        bgcolor="#111111",
+        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        border=ft.border.only(bottom=ft.BorderSide(1, "#1a2a1a")),
+        bgcolor="#050505",
 
         content=ft.Row(
 
@@ -371,32 +539,30 @@ def main(page: ft.Page):
 
             controls=[
 
-                ft.Column(
-
-                    spacing=2,
-
+                ft.Row(
+                    spacing=6,
+                    expand=True,
                     controls=[
-
+                        ft.Text("■", color="#00FF00", size=10),
                         ft.Text(
                             "TERMINAL CHAT",
-                            size=20,
+                            size=13,
                             weight="bold",
                             color="#00FF00",
                         ),
-
-                        user_text
+                        ft.Text("|", color="#1a3a1a", size=13),
+                        user_text,
                     ]
                 ),
 
                 ft.Row(
-
+                    spacing=2,
                     controls=[
-
                         avatar_preview,
-
                         ft.IconButton(
-                            icon=ft.Icons.SETTINGS,
-                            icon_color="#00FF00",
+                            icon=ft.icons.SETTINGS,
+                            icon_color="#336633",
+                            icon_size=18,
                             on_click=toggle_settings,
                         )
                     ]
@@ -411,19 +577,30 @@ def main(page: ft.Page):
 
     input_bar = ft.Container(
 
-        padding=10,
-        border_radius=15,
-        bgcolor="#111111",
+        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+        border=ft.border.only(top=ft.BorderSide(1, "#1a2a1a")),
+        bgcolor="#050505",
 
         content=ft.Row(
 
+            spacing=4,
+            vertical_alignment="center",
+
             controls=[
+
+                ft.Text(
+                    ">_",
+                    color="#00FF00",
+                    size=14,
+                    weight="bold",
+                ),
 
                 msg_input,
 
                 ft.IconButton(
-                    icon=ft.Icons.SEND,
-                    icon_color="#00FF00",
+                    icon=ft.icons.SEND,
+                    icon_color="#336633",
+                    icon_size=18,
                     on_click=send_msg,
                 )
             ]
@@ -500,13 +677,16 @@ def main(page: ft.Page):
     # UI
     # =====================================
 
+    page.overlay.append(file_picker)
+    page.overlay.append(settings_dialog)
+
     page.add(
         header,
-        settings_panel,
         ft.Container(
             expand=True,
             content=chat_display,
         ),
+        reply_bar,
         input_bar
     )
 
@@ -521,5 +701,8 @@ def main(page: ft.Page):
 # =====================================
 
 if __name__ == "__main__":
+    os.makedirs("uploads", exist_ok=True)
+    if not os.getenv("FLET_SECRET_KEY"):
+        os.environ["FLET_SECRET_KEY"] = "terminal-chat-upload-secret-key-2024"
     port = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=None, port=port)
+    ft.app(target=main, view=None, port=port, upload_dir="uploads", web_renderer=ft.WebRenderer.HTML)
