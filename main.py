@@ -705,4 +705,4 @@ if __name__ == "__main__":
     if not os.getenv("FLET_SECRET_KEY"):
         os.environ["FLET_SECRET_KEY"] = "terminal-chat-upload-secret-key-2024"
     port = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=None, port=port, upload_dir="uploads", web_renderer=ft.WebRenderer.HTML)
+    ft.app(target=main, view=None, port=port, upload_dir="uploads")
