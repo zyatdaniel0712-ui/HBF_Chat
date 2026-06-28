@@ -45,7 +45,7 @@ def main(page: ft.Page):
     # USER
     # =====================================
 
-    page.my_user_nick = f"USER_{random.randint(1000,9999)}"
+    page.my_user_nick = f"User.._{random.randint(1000,9999)}"
     page.my_avatar = random.choice(AVATARS)
 
     page.last_msg_id = 0
