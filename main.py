@@ -3,16 +3,50 @@ import random
 import asyncio
 import os
 import base64
-from supabase import create_client
+import uuid
+import httpx
 
 # =====================================
-# SUPABASE
+# SUPABASE (через обычный REST — без тяжёлой библиотеки supabase,
+# так приложение надёжно собирается в APK)
 # =====================================
 
 URL = "https://nesxjcdhqgstahwfnrba.supabase.co"
 KEY = "sb_publishable_FLDVrbaxacdkGUI7UNN0_A_qfq0N7Lt"
 
-supabase = create_client(URL, KEY)
+REST = f"{URL}/rest/v1/messages"
+HEADERS = {"apikey": KEY, "Content-Type": "application/json"}
+
+
+def db_fetch(params: dict):
+    r = httpx.get(REST, headers=HEADERS, params=params, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+def db_insert(row: dict):
+    r = httpx.post(
+        REST,
+        headers={**HEADERS, "Prefer": "return=representation"},
+        json=row,
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def upload_avatar(data: bytes, ext: str, mime: str) -> str:
+    """Грузит аватарку в Supabase Storage (бакет 'avatars', public)."""
+    name = f"{uuid.uuid4().hex}.{ext}"
+    r = httpx.post(
+        f"{URL}/storage/v1/object/avatars/{name}",
+        headers={"apikey": KEY, "Content-Type": mime},
+        content=data,
+        timeout=30,
+    )
+    r.raise_for_status()
+    return f"{URL}/storage/v1/object/public/avatars/{name}"
+
 
 # =====================================
 # AVATARS
@@ -25,6 +59,8 @@ AVATARS = [
     "https://api.dicebear.com/7.x/bottts/png?seed=4",
     "https://api.dicebear.com/7.x/bottts/png?seed=5",
 ]
+
+HISTORY_LIMIT = 50
 
 # =====================================
 # MAIN
@@ -48,9 +84,11 @@ def main(page: ft.Page):
     page.my_user_nick = f"User.._{random.randint(1000,9999)}"
     page.my_avatar = random.choice(AVATARS)
 
-    page.last_msg_id = 0
     page.reply_to_user = ""
     page.reply_to_text = ""
+
+    seen_ids = set()      # id сообщений, которые уже показаны (чтобы не было дублей)
+    poll_state = {"last_id": 0}  # до какого id мы уже опрашивали сервер
 
     # =====================================
     # CHAT
@@ -72,7 +110,7 @@ def main(page: ft.Page):
         focused_border_color="transparent",
         bgcolor="transparent",
         cursor_color="#00FF00",
-        on_submit=lambda e: send_msg(e),
+        on_submit=lambda e: page.run_task(send_msg, e),
     )
 
     reply_bar_label = ft.Text(
@@ -152,29 +190,63 @@ def main(page: ft.Page):
     # FILE PICKER
     # =====================================
 
-    def on_file_picked(e):
+    async def apply_avatar_bytes(data: bytes, filename: str):
+        ext = filename.rsplit(".", 1)[-1].lower()
+        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
+
+        upload_status.value = "Загружаю..."
+        page.update()
+
+        avatar_url = None
+        try:
+            # лучший вариант: файл в Supabase Storage, в сообщения идёт короткая ссылка
+            avatar_url = await asyncio.to_thread(upload_avatar, data, ext, mime)
+        except Exception as ex:
+            print("storage upload failed:", ex)
+
+        if avatar_url is None:
+            # запасной вариант: встроить картинку в сообщение (только маленькие файлы)
+            if len(data) > 60_000:
+                upload_status.value = "Файл слишком большой (нужно до 60 КБ) или не настроен бакет avatars"
+                page.update()
+                return
+            avatar_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+
+        page.my_avatar = avatar_url
+        avatar_preview.foreground_image_src = avatar_url
+        settings_big_avatar.foreground_image_src = avatar_url
+        upload_status.value = "Аватарка загружена!"
+        page.update()
+
+    async def on_file_picked(e):
         if not e.files:
             return
         file = e.files[0]
-        upload_url = page.get_upload_url(file.name, 60)
-        file_picker.upload([ft.FilePickerUploadFile(file.name, upload_url=upload_url)])
-
-    def on_upload_progress(e):
-        if e.progress == 1.0:
-            file_path = os.path.join("uploads", e.file_name)
+        if page.web:
+            # на сайте файл сначала уходит на сервер, дальше читаем в on_upload
+            upload_url = page.get_upload_url(file.name, 60)
+            file_picker.upload([ft.FilePickerUploadFile(file.name, upload_url=upload_url)])
+        else:
+            # в приложении на телефоне читаем файл напрямую
             try:
-                with open(file_path, "rb") as f:
+                with open(file.path, "rb") as f:
                     data = f.read()
-                ext = e.file_name.rsplit(".", 1)[-1].lower()
-                mime = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
-                avatar_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
-            except Exception:
-                avatar_url = f"/uploads/{e.file_name}"
-            page.my_avatar = avatar_url
-            avatar_preview.foreground_image_src = avatar_url
-            settings_big_avatar.foreground_image_src = avatar_url
-            upload_status.value = "Аватарка загружена!"
-            page.update()
+                await apply_avatar_bytes(data, file.name)
+            except Exception as ex:
+                print(ex)
+                upload_status.value = "Ошибка загрузки"
+                page.update()
+
+    async def on_upload_progress(e):
+        if e.progress == 1.0:
+            try:
+                with open(os.path.join("uploads", e.file_name), "rb") as f:
+                    data = f.read()
+                await apply_avatar_bytes(data, e.file_name)
+            except Exception as ex:
+                print(ex)
+                upload_status.value = "Ошибка загрузки"
+                page.update()
         elif e.error:
             upload_status.value = "Ошибка загрузки"
             page.update()
@@ -284,67 +356,47 @@ def main(page: ft.Page):
         page.update()
 
     # =====================================
-    # RENDER MESSAGE
+    # BUILD MESSAGE (возвращает контрол, сам ничего не обновляет)
     # =====================================
 
-    def render_msg(user, text, avatar):
+    def build_msg(user, text, avatar):
 
+        user = user or "?"
+        text = text or ""
+        avatar = avatar or AVATARS[0]
         user_lower = user.lower()
 
-        # =====================================
         # SERVER MESSAGE
-        # =====================================
-
         if user_lower in ["server", "сервер"]:
-
-            chat_display.controls.append(
-                ft.Text(
-                    f"*** SYSTEM: {text} ***",
-                    color="#FFFF00",
-                    size=13,
-                    weight="bold",
-                )
+            return ft.Text(
+                f"*** SYSTEM: {text} ***",
+                color="#FFFF00",
+                size=13,
+                weight="bold",
             )
 
-            page.update()
-            return
-
-        # =====================================
         # NAME COLORS
-        # =====================================
-
         if user_lower == "кевин":
             name_color = "cyan"
-
         elif user_lower in ["хан", "солвер"]:
             name_color = "red"
-
         elif user == page.my_user_nick:
             name_color = "#00FF00"
-
         else:
             name_color = "#aaaaaa"
 
-        # =====================================
         # PARSE REPLY PREFIX
-        # =====================================
-
         quoted_user = None
         quoted_text = None
         display_text = text
 
         if text.startswith("↪REPLY↪"):
             parts = text.split("↪")
-            # ['', 'REPLY', username, quoted_text, '', '\nactual']
             if len(parts) >= 5:
                 quoted_user = parts[2]
                 quoted_text = parts[3]
                 newline_idx = text.find("\n")
                 display_text = text[newline_idx + 1:] if newline_idx != -1 else text
-
-        # =====================================
-        # TERMINAL-STYLE MESSAGE ROW
-        # =====================================
 
         def make_reply_fn(u, t):
             def fn(e):
@@ -420,58 +472,82 @@ def main(page: ft.Page):
 
         col_controls.append(message_row)
 
-        chat_display.controls.append(
-            ft.Column(spacing=0, tight=True, controls=col_controls)
-        )
+        return ft.Column(spacing=0, tight=True, controls=col_controls)
 
-        page.update()
+    # =====================================
+    # ADD MESSAGES (все сообщения от всех, без дублей)
+    # =====================================
+
+    def add_messages(rows):
+
+        added = False
+
+        for msg in rows:
+
+            mid = msg.get("id")
+
+            if mid in seen_ids:
+                continue
+
+            seen_ids.add(mid)
+
+            chat_display.controls.append(
+                build_msg(
+                    msg.get("user_name"),
+                    msg.get("text"),
+                    msg.get("avatar_url"),
+                )
+            )
+            added = True
+
+        if added:
+            page.update()
 
     # =====================================
     # SEND MESSAGE
     # =====================================
 
-    def send_msg(e):
+    async def send_msg(e):
 
         text = msg_input.value.strip()
 
         if text == "":
             return
 
-        msg_input.value = ""
-
         full_text = text
-        if page.reply_to_user:
-            full_text = f"↪REPLY↪{page.reply_to_user}↪{page.reply_to_text}↪\n{text}"
-            page.reply_to_user = ""
-            page.reply_to_text = ""
-            reply_bar.visible = False
+        reply_user = page.reply_to_user
+        reply_text = page.reply_to_text
+
+        if reply_user:
+            full_text = f"↪REPLY↪{reply_user}↪{reply_text}↪\n{text}"
+
+        msg_input.value = ""
+        page.reply_to_user = ""
+        page.reply_to_text = ""
+        reply_bar.visible = False
+        page.update()
 
         try:
-
-            res = (
-                supabase
-                .table("messages")
-                .insert({
-
+            res = await asyncio.to_thread(
+                db_insert,
+                {
                     "user_name": page.my_user_nick,
                     "text": full_text,
-                    "avatar_url": page.my_avatar
-
-                })
-                .execute()
+                    "avatar_url": page.my_avatar,
+                },
             )
-
-            if res.data:
-                page.last_msg_id = res.data[0]["id"]
+            # показываем своё сообщение сразу; poll не покажет его второй раз (seen_ids)
+            add_messages(res)
 
         except Exception as ex:
             print(ex)
+            # не потеряем текст, если отправка не удалась
+            msg_input.value = text
+            page.snack_bar = ft.SnackBar(ft.Text("Не удалось отправить. Проверьте интернет."))
+            page.snack_bar.open = True
+            page.update()
 
-        render_msg(
-            page.my_user_nick,
-            full_text,
-            page.my_avatar
-        )
+        msg_input.focus()
 
     # =====================================
     # SETTINGS DIALOG
@@ -491,6 +567,7 @@ def main(page: ft.Page):
             width=300,
             spacing=12,
             tight=True,
+            scroll=ft.ScrollMode.AUTO,
             controls=[
                 ft.ElevatedButton(
                     "Сменить аватар",
@@ -601,77 +678,59 @@ def main(page: ft.Page):
                     icon=ft.icons.SEND,
                     icon_color="#336633",
                     icon_size=18,
-                    on_click=send_msg,
+                    on_click=lambda e: page.run_task(send_msg, e),
                 )
             ]
         )
     )
 
     # =====================================
-    # LOAD HISTORY
+    # LOAD HISTORY + UPDATE LOOP
     # =====================================
 
-    try:
+    async def sync_loop():
 
-        res = (
-            supabase
-            .table("messages")
-            .select("*")
-            .order("id")
-            .limit(30)
-            .execute()
-        )
+        # последние HISTORY_LIMIT сообщений (раньше грузились самые СТАРЫЕ 30)
+        while True:
+            try:
+                rows = await asyncio.to_thread(
+                    db_fetch,
+                    {
+                        "select": "*",
+                        "order": "id.desc",
+                        "limit": str(HISTORY_LIMIT),
+                    },
+                )
+                rows.reverse()
+                add_messages(rows)
+                if rows:
+                    poll_state["last_id"] = max(m["id"] for m in rows)
+                break
+            except Exception as ex:
+                print(ex)
+                await asyncio.sleep(3)
 
-        for msg in res.data:
-
-            render_msg(
-                msg["user_name"],
-                msg["text"],
-                msg.get("avatar_url", AVATARS[0])
-            )
-
-            page.last_msg_id = msg["id"]
-
-    except Exception as ex:
-        print(ex)
-
-    # =====================================
-    # UPDATE LOOP
-    # =====================================
-
-    async def check_updates():
-
+        # дальше каждые 2 секунды забираем ВСЕ новые сообщения от всех
         while True:
 
-            try:
+            await asyncio.sleep(2)
 
-                res = (
-                    supabase
-                    .table("messages")
-                    .select("*")
-                    .gt("id", page.last_msg_id)
-                    .order("id")
-                    .execute()
+            try:
+                rows = await asyncio.to_thread(
+                    db_fetch,
+                    {
+                        "select": "*",
+                        "id": f"gt.{poll_state['last_id']}",
+                        "order": "id.asc",
+                    },
                 )
 
-                for msg in res.data:
-
-                    if msg["user_name"] != page.my_user_nick:
-
-                        render_msg(
-                            msg["user_name"],
-                            msg["text"],
-                            msg.get("avatar_url", AVATARS[0])
-                        )
-
-                    page.last_msg_id = msg["id"]
-
-                page.update()
+                if rows:
+                    add_messages(rows)
+                    poll_state["last_id"] = max(m["id"] for m in rows)
 
             except Exception as ex:
                 print(ex)
-
-            await asyncio.sleep(2)
 
     # =====================================
     # UI
@@ -681,28 +740,45 @@ def main(page: ft.Page):
     page.overlay.append(settings_dialog)
 
     page.add(
-        header,
-        ft.Container(
+        ft.SafeArea(
             expand=True,
-            content=chat_display,
-        ),
-        reply_bar,
-        input_bar
+            content=ft.Column(
+                expand=True,
+                spacing=0,
+                controls=[
+                    header,
+                    ft.Container(
+                        expand=True,
+                        content=chat_display,
+                    ),
+                    reply_bar,
+                    input_bar,
+                ],
+            ),
+        )
     )
 
     # =====================================
     # START
     # =====================================
 
-    page.run_task(check_updates)
+    page.run_task(sync_loop)
+
 
 # =====================================
 # APP
 # =====================================
 
 if __name__ == "__main__":
-    os.makedirs("uploads", exist_ok=True)
-    if not os.getenv("FLET_SECRET_KEY"):
-        os.environ["FLET_SECRET_KEY"] = "terminal-chat-upload-secret-key-2024"
-    port = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=None, port=port, upload_dir="uploads")
+
+    port = os.getenv("PORT")
+
+    if port:
+        # режим сайта (например, на хостинге) — как было раньше
+        os.makedirs("uploads", exist_ok=True)
+        if not os.getenv("FLET_SECRET_KEY"):
+            os.environ["FLET_SECRET_KEY"] = "terminal-chat-upload-secret-key-2024"
+        ft.app(target=main, view=None, port=int(port), upload_dir="uploads")
+    else:
+        # режим приложения (APK на телефоне / окно на компьютере)
+        ft.app(target=main)
